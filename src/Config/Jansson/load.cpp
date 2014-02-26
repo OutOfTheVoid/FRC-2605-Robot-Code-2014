@@ -365,7 +365,7 @@ static void lex_scan_string(lex_t *lex, json_error_t *error)
          - two \uXXXX escapes (length 12) forming an UTF-16 surrogate pair
            are converted to 4 bytes
     */
-    lex->value.string = jsonp_malloc(lex->saved_text.length + 1);
+    lex->value.string = (char *) jsonp_malloc(lex->saved_text.length + 1);
     if(!lex->value.string) {
         /* this is not very nice, since TOKEN_INVALID is returned */
         goto out;
@@ -461,14 +461,16 @@ out:
 #ifndef JANSSON_USING_CMAKE /* disabled if using cmake */
 #if JSON_INTEGER_IS_LONG_LONG
 #ifdef _MSC_VER  /* Microsoft Visual Studio */
-#define json_strtoint     _strtoi64
+//#define json_strtoint     _strtoi64
 #else
-#define json_strtoint     strtoll
+//#define json_strtoint     strtoll
 #endif
 #else
+///#define json_strtoint     strtol
+#endif
+#endif
+
 #define json_strtoint     strtol
-#endif
-#endif
 
 static int lex_scan_number(lex_t *lex, int c, json_error_t *error)
 {
@@ -933,7 +935,7 @@ typedef struct
 static int buffer_get(void *data)
 {
     char c;
-    buffer_data_t *stream = data;
+    buffer_data_t *stream = (buffer_data_t *) data;
     if(stream->pos >= stream->len)
       return EOF;
 
@@ -1035,7 +1037,7 @@ typedef struct
 static int callback_get(void *data)
 {
     char c;
-    callback_data_t *stream = data;
+    callback_data_t *stream = (callback_data_t *) data;
 
     if(stream->pos >= stream->len) {
         stream->pos = 0;

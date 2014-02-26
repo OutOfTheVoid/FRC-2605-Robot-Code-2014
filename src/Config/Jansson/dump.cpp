@@ -126,7 +126,7 @@ static int dump_string(const char *str, json_dump_callback_t dump, void *data, s
                 /* codepoint is in BMP */
                 if(codepoint < 0x10000)
                 {
-                    sprintf(seq, "\\u%04x", codepoint);
+                    sprintf(seq, "\\u%04x", (unsigned int) codepoint);
                     length = 6;
                 }
 
@@ -139,7 +139,7 @@ static int dump_string(const char *str, json_dump_callback_t dump, void *data, s
                     first = 0xD800 | ((codepoint & 0xffc00) >> 10);
                     last = 0xDC00 | (codepoint & 0x003ff);
 
-                    sprintf(seq, "\\u%04x\\u%04x", first, last);
+                    sprintf(seq, "\\u%04x\\u%04x", (unsigned int) first, (unsigned int) last);
                     length = 12;
                 }
 
@@ -306,7 +306,7 @@ static int do_dump(const json_t *json, size_t flags, int depth,
                 int (*cmp_func)(const void *, const void *);
 
                 size = json_object_size(json);
-                keys = jsonp_malloc(size * sizeof(struct object_key));
+                keys = (object_key *) jsonp_malloc(size * sizeof(struct object_key));
                 if(!keys)
                     goto object_error;
 

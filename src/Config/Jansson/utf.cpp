@@ -8,7 +8,7 @@
 #include <string.h>
 #include "utf.h"
 
-int utf8_encode(int32_t codepoint, char *buffer, int *size)
+int utf8_encode(int codepoint, char *buffer, int *size)
 {
     if(codepoint < 0)
         return -1;

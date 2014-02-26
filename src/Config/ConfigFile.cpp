@@ -21,7 +21,7 @@ bool ConfigFile :: Init ()
 	if ( RootNode == NULL )
 	{
 
-		printf("CONFIG_FILE: JSON Error: %s\n", JSONError.text );
+		printf ( "CONFIG_FILE: JSON Error: %s\n", JSONError.text );
 		return false;
 
 	}

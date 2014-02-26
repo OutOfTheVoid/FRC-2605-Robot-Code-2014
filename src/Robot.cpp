@@ -110,12 +110,13 @@ Robot :: Robot ():
 	TestPICServo = PICServoControl -> GetModule ( 1 );
 	TestPICServo -> SetControlMode ( PICServo :: kPWM );*/
 
-	SCom = new PICServoCom ();
 	PServer = new AnalogCANJaguarPipeServer ();
 
 	PServer -> Start ();
 	//AnalogCANJaguarPipe_t Pipe = PServer -> AddPipe ( 4, 3, 1 );
 	//PServer -> EnablePipe ( Pipe );
+
+	SCom = new PICServoCom ();
 
 };
 
@@ -475,42 +476,26 @@ void Robot :: TestInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
 
-	//TestPICServo -> Enable ();
-
-	SCom -> ModuleResetPosition ( 1, false );
-	printf ( "READ STATUS\n" );
-	SCom -> ReceiveStatusPacket ();
-	printf ( "STATUS RECEIVED\n" );
-
 };
 
 void Robot :: TestPeriodic ()
 {
 
-	printf ( "LOAD TRAJECTORY\n" );
+	PICServoCom :: PICServoStatus_t Status;
 
-	if ( StrafeStick -> GetRawButton ( 3 ) )
-		SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 20, false, false, false, true, false, false, false, true );
-	else
-		SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 0, false, false, false, true, false, false, false, true );
-
-	printf ( "READ STATUS\n" );
-
+	SCom -> ModuleStopMotor ( 1, false, false, true );
 	SCom -> ReceiveStatusPacket ();
 
-	printf ( "RECEIVE STATUS\n" );
+	SCom -> GetStatus ( & Status );
+
+	printf ( "PICServo flags: %x\n", (int) Status.StandardFlags );
 
 };
 
 void Robot :: TestEnd ()
 {
 
-	//TestPICServo -> Disable ();
-
 	printf ( "================\n=    Test X    =\n================\n" );
-
-	/*SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 0, false, false, false, true, false, false, false, true );
-	SCom -> ReceiveStatusPacket ();*/
 
 };
 

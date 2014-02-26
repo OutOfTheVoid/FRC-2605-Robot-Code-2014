@@ -94,7 +94,7 @@ public:
 private:
 
 	void SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Data, uint8_t DataSize );
-	void ReceiveMessage ( uint8_t * Buffer, uint8_t Count );
+	bool ReceiveMessage ( uint8_t * Buffer, uint32_t Count );
 
 	SerialPort * Port;
 

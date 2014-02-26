@@ -22,6 +22,11 @@
 #define CANJAGSERVER_PRIORITY 50
 #define CANJAGSERVER_STACKSIZE 0x20000
 
+/*
+* This "server" is essentially a motor control thread. It implements a continuous message loop for receiving commands to send to the jaguars. 
+* I initially implemented it as a way to keep CANJaguar objects in one thread context, due to problems with cross-thread usage not properly setting speeds.
+*/
+
 class CANJaguarServer
 {
 public:

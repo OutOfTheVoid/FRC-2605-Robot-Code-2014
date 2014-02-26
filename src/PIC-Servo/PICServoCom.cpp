@@ -3,15 +3,14 @@
 PICServoCom :: PICServoCom ()
 {
 
-	Port = new SerialPort ( PICSERVO_BAUD_RATE_INITIAL, 8, SerialPort :: kParity_None, SerialPort :: kStopBits_One );
-	Port -> SetFlowControl ( SerialPort :: kFlowControl_None );
-	Port -> SetWriteBufferMode ( SerialPort :: kFlushOnAccess );
+	Port = new SerialPort ( PICSERVO_BAUD_RATE_INITIAL );
 	Port -> DisableTermination ();
+	Port -> SetTimeout ( 0.1 );
 	Port -> Reset ();
 
 	SerialLock = semMCreate ( SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE );
 
-	StatusSize = 1;
+	StatusSize = 2;
 	StatusType = 0x00;
 	StatusBytes = new uint8_t [ 20 ];
 
@@ -402,7 +401,10 @@ void PICServoCom :: ModuleLoadTrajectory ( uint8_t Module, int32_t Position, dou
 void PICServoCom :: ReceiveStatusPacket ()
 {
 
-	ReceiveMessage ( StatusBytes, StatusSize );
+	uint8_t TBuff [ StatusSize ];
+
+	if ( ReceiveMessage ( TBuff, StatusSize ) )
+		memcpy ( reinterpret_cast <void *> ( StatusBytes ), reinterpret_cast <void *> ( TBuff ), StatusSize );
 
 };
 
@@ -530,15 +532,27 @@ void PICServoCom :: SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Da
 
 	DataBuffer [ 3 + DataSize ] = CheckSum;
 
+	Port -> SetWriteBufferSize ( 4 + DataSize );
 	Port -> Write ( reinterpret_cast <const char *> ( DataBuffer ), 4 + DataSize );
-	Port -> Flush ();
 
 };
 
-void PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint8_t Count )
+bool PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint32_t Count )
 {
 
 	Port -> SetReadBufferSize ( Count );
-	Port -> Read ( reinterpret_cast <char *> ( Buffer ), Count );
+
+	if ( Port -> Read ( reinterpret_cast <char *> ( Buffer ), Count ) == Count )
+	{
+
+		Port -> Reset ();
+
+		return true;
+
+	}
+
+	Port -> Reset ();
+
+	return false;
 
 };

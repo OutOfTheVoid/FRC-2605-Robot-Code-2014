@@ -11,6 +11,11 @@
 #include "CANJaguarServer.h"
 #include "src/CANJaguarUtils/CANJaguarUtils.h"
 
+/*
+* AsynchCANJaugar
+* Utility class to abstract the CANJaguarServer to individual SpeedController objects. Used closely with CANJaguarUtil.h for configuration.
+*/
+
 class AsynchCANJaguar : public SpeedController, public ErrorBase
 {
 public:

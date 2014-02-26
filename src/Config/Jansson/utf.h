@@ -15,7 +15,7 @@
 /* inttypes.h includes stdint.h in a standard environment, so there's
 no need to include stdint.h separately. If inttypes.h doesn't define
 int32_t, it's defined in config.h. */
-#include <inttypes.h>
+#include <stdint.h>
 #endif /* HAVE_INTTYPES_H */
 
 #else /* !HAVE_CONFIG_H */
@@ -23,7 +23,7 @@ int32_t, it's defined in config.h. */
 typedef int int32_t;
 #else /* !_WIN32 */
 /* Assume a standard environment */
-#include <inttypes.h>
+#include <stdint.h>
 #endif /* _WIN32 */
 
 #endif /* HAVE_CONFIG_H */

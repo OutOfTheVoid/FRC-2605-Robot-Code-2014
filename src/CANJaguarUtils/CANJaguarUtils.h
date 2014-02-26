@@ -6,6 +6,10 @@
 * FRC Team Sehome Semonsters 2605
 */
 
+/*
+* CANJaguar Utils, a simple utility library for working with CANJaguars. It will configure them according to the setup of a CANJagConfigInto structure, and check them for brownouts.
+*/
+
 #include "WPILib.h"
 
 typedef struct CANJagConfigInfo

@@ -32,7 +32,7 @@ LEDStrip :: LEDStrip ( uint32_t ClockPin, uint32_t MOSIPin, uint32_t MISOPin, ui
 LEDStrip :: ~LEDStrip ()
 {
 
-
+ 	// TODO: Destruct everything. EVERYTHING.
 
 };
 

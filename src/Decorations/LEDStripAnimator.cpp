@@ -41,6 +41,8 @@ LEDStripAnimator :: LEDAnimationFrame :: ~LEDAnimationFrame ()
 LEDStripAnimator :: LEDStripAnimator ( LEDStrip * Strip, uint32_t FrameCount )
 {
 
+	this -> Strip = Strip;
+
 	this -> Frames = new LEDAnimationFrame_t [ FrameCount ];
 
 	this -> FrameCount = FrameCount;
@@ -58,6 +60,13 @@ LEDStripAnimator :: LEDStripAnimator ( LEDStrip * Strip, uint32_t FrameCount )
 	this -> StopColor = 0x000000;
 
 	this -> StopSections = new Vector <uint32_t> ();
+
+};
+
+LEDStripAnimator :: ~LEDStripAnimator ()
+{
+
+	// TODO: Destructor.
 
 };
 
@@ -143,8 +152,6 @@ void LEDStripAnimator :: WaitTillNextFrame ()
 	if ( TimeLeft > 0 )
 		Wait ( TimeLeft );
 
-	DispatchNext = true;
-
 };
 
 void LEDStripAnimator :: Update ()
@@ -157,12 +164,41 @@ void LEDStripAnimator :: Update ()
 	{
 
 		if ( ! Started )
+		{
+
 			Started = true;
+
+			LEDAnimationFrame_t * Frame = & Frames [ CurrentFrame ];
+
+			for ( uint32_t i = 0; i < Frame -> PixelCount; i ++ )
+					Strip -> SetPixelColor ( Frame -> Offset + i, Frame -> Colors [ i ] );
+
+			LastFrameTime = Timer :: GetPPCTimestamp ();
+
+		}
 
 		if ( ! Paused )
 		{
 
-			
+			LEDAnimationFrame_t * Frame = & Frames [ CurrentFrame ];
+
+			double TimeSinceLast = Timer :: GetPPCTimestamp () - LastFrameTime;
+			double TimeLeft = Frame -> Time - TimeSinceLast;
+
+			if ( TimeLeft <= 0 )
+			{
+
+				CurrentFrame ++;
+				CurrentFrame %= FrameCount;
+
+				Frame = & Frames [ CurrentFrame ];
+
+				for ( uint32_t i = 0; i < Frame -> PixelCount; i ++ )
+					Strip -> SetPixelColor ( Frame -> Offset + i, Frame -> Colors [ i ] );
+
+				LastFrameTime = Timer :: GetPPCTimestamp ();
+
+			}
 
 		}
 
@@ -175,7 +211,16 @@ void LEDStripAnimator :: Update ()
 
 			Started = false;
 
-			//for (  )
+			for ( uint32_t i = 0; i < StopSections -> GetLength (); i ++ )
+			{
+
+				uint32_t LEDMask = ( * StopSections ) [ i ];
+
+				for ( uint32_t j = 0; j < 0x20; j ++ )
+					if ( LEDMask & 1 << j )
+					Strip -> SetPixelColor ( i * 32 + j, StopColor );
+
+			}
 
 		}
 
