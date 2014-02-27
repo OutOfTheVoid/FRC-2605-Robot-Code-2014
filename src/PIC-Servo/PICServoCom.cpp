@@ -3,10 +3,14 @@
 PICServoCom :: PICServoCom ()
 {
 
-	Port = new SerialPort ( PICSERVO_BAUD_RATE_INITIAL );
-	Port -> DisableTermination ();
-	Port -> SetTimeout ( 0.1 );
-	Port -> Reset ();
+	Com = new SerialDriver ( 19200 );
+	Com -> SetFlowControl ( SerialDriver :: FlowControl_None );
+	Com -> SetTimeout ( 0.1 );
+	Com -> SetReadBufferSize ( 0x20 );
+	Com -> SetWriteBufferSize ( 0x20 );
+	Com -> Clear ();
+
+	Com -> FlushReadBuffer ();
 
 	SerialLock = semMCreate ( SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE );
 
@@ -19,7 +23,7 @@ PICServoCom :: PICServoCom ()
 PICServoCom :: ~PICServoCom ()
 {
 
-	delete Port;
+	delete Com;
 
 };
 
@@ -532,26 +536,24 @@ void PICServoCom :: SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Da
 
 	DataBuffer [ 3 + DataSize ] = CheckSum;
 
-	Port -> SetWriteBufferSize ( 4 + DataSize );
-	Port -> Write ( reinterpret_cast <const char *> ( DataBuffer ), 4 + DataSize );
+	Com -> Write ( DataBuffer, 4 + DataSize );
+	Com -> FlushWriteBuffer ();
 
 };
 
 bool PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint32_t Count )
 {
 
-	Port -> SetReadBufferSize ( Count );
-
-	if ( Port -> Read ( reinterpret_cast <char *> ( Buffer ), Count ) == Count )
+	if ( Com -> Read ( Buffer, Count ) == Count )
 	{
 
-		Port -> Reset ();
+		Com -> FlushReadBuffer ();
 
 		return true;
 
 	}
 
-	Port -> Reset ();
+	Com -> FlushReadBuffer ();
 
 	return false;
 

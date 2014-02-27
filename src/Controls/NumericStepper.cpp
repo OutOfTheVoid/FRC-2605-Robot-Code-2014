@@ -20,11 +20,11 @@ NumericStepper :: NumericStepper ( GenericHID * Device, uint32_t UpButton, uint3
 	
 };
 
-~NumericStepper ()
+NumericStepper :: ~NumericStepper ()
 {
 };
 
-void NumericStepper :: SetRange ( int32_t Min, int32_t, Max )
+void NumericStepper :: SetRange ( int32_t Min, int32_t Max )
 {
 
 	this -> Min = Min;

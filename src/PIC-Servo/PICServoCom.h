@@ -1,7 +1,7 @@
 #ifndef SHS_2605_PIC_SERVO_SERVER_H
 #define SHS_2605_PIC_SERVO_SERVER_H
 
-#include "WPILib.h"
+#include "src/Drivers/SerialDriver.h"
 
 #define PICSERVO_BAUD_RATE_INITIAL 19200
 
@@ -96,7 +96,7 @@ private:
 	void SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Data, uint8_t DataSize );
 	bool ReceiveMessage ( uint8_t * Buffer, uint32_t Count );
 
-	SerialPort * Port;
+	SerialDriver * Com;
 
 	SEM_ID SerialLock;
 
