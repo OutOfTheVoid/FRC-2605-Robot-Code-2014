@@ -181,7 +181,7 @@ void AnalogCANJaguarPipeServer :: EnablePipe ( AnalogCANJaguarPipe_t Pipe )
 	SendMessage -> Command = COMMAND_ENABLE_PIPE;
 	SendMessage -> Data = static_cast <uint32_t> ( Pipe );
 
-	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
@@ -241,7 +241,7 @@ void AnalogCANJaguarPipeServer :: SetPipeInverted ( AnalogCANJaguarPipe_t Pipe, 
 	SendMessage -> Command = COMMAND_SET_PIPE_INVERTED;
 	SendMessage -> Data = reinterpret_cast <uint32_t> ( SIMessage );
 
-	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
@@ -258,7 +258,7 @@ void AnalogCANJaguarPipeServer :: SetPipeOffset ( AnalogCANJaguarPipe_t Pipe, do
 	SendMessage -> Command = COMMAND_SET_PIPE_OFFSET;
 	SendMessage -> Data = reinterpret_cast <uint32_t> ( SOMessage );
 
-	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
@@ -270,7 +270,7 @@ void AnalogCANJaguarPipeServer :: ZeroPipe ( AnalogCANJaguarPipe_t Pipe )
 	SendMessage -> Command = COMMAND_ZERO_PIPE;
 	SendMessage -> Data = static_cast <uint32_t> ( Pipe );
 
-	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 

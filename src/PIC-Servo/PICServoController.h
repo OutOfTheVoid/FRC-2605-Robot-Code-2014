@@ -5,6 +5,11 @@
 #include "PICServoCom.h"
 #include "AnalogCANJaguarPipeServer.h"
 
+#include "WPILib.h"
+
+#define PICSERVO_CONTROL_TASK_PRIORITY 100
+#define PICSERVO_CONTROL_TASK_STACKSIZE 0x20000
+
 class PICServoController
 {
 
@@ -20,9 +25,109 @@ public:
 
 	PICServo * GetModule ( uint8_t ModuleNumber );
 
-	//AnalogCANJaguarPipe_t GetPipeID ( uint8_t ModuleNumber );
-
 private:
+
+	typedef struct
+	{
+
+		uint32_t Command;
+		uint32_t Data;
+
+	} ServerMessage;
+
+	typedef struct 
+	{
+		
+		uint8_t Index;
+		int16_t	Value;
+
+	} SetPWMMessage;
+
+	typedef struct
+	{
+
+		uint8_t Index;
+		double Position;
+
+	} SetPositionMessage;
+
+	typedef struct
+	{
+
+		uint8_t Index;
+		double Position;
+		double Velocity;
+
+	} SetPositionVMessage;
+
+	typedef struct
+	{
+
+		uint8_t Index;
+		double Position;
+		double Acceleration;
+
+	} SetPositionAMessage;
+
+	typedef struct
+	{
+		
+		uint8_t Index;
+		double Position;
+		double Velocity;
+		double Acceleration;
+
+	} SetPositionVAMessage;
+
+	typedef SetPositionMessage SetCurrentPositionMessage;
+
+	typedef struct
+	{
+
+		uint8_t Index;
+		double Velocity;
+
+	} SetVelocityMessage;
+
+	typedef struct
+	{
+
+		uint8_t Index;
+		double Velocity;
+		double Acceleration;
+
+	} SetVelocityAMessage;
+
+	typedef struct
+	{
+		
+		uint8_t Index;
+		double P;
+		double I;
+		double D;
+
+	} SetPIDMessage;
+
+	enum PICServoMessageType
+	{
+
+		PICSERVO_DISABLE_MESSAGE = 0,
+		PICSERVO_ENABLE_MESSAGE,
+		PICSERVO_SETPWM_MESSAGE,
+		PICSERVO_SETPOSITION_MESSAGE,
+		PICSERVO_SETPOSITIONV_MESSAGE,
+		PICSERVO_SETPOSITIONA_MESSAGE,
+		PICSERVO_SETPOSITIONVA_MESSAGE,
+		PICSERVO_RESETPOSITION_MESSAGE,
+		PICSERVO_SETCURRENTPOSITION_MESSAGE,
+		PICSERVO_READPOSITION_MESSAGE,
+		PICSERVO_SETVELOCITY_MESSAGE,
+		PICSERVO_SETVELOCITYA_MESSAGE,
+		PICSERVO_SETPID_MESSAGE,
+		PICSERVO_INIT_MESSAGE,
+		PICSERVO_REINIT_MESSAGE
+
+	};
 
 	void PICServoEnable ( uint8_t ModuleNumber );
 	void PICServoDisable ( uint8_t ModuleNumber );
@@ -44,12 +149,24 @@ private:
 
 	void PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D );
 
+	void RunLoop ();
+
 	PICServo ** Modules;
 
 	PICServoCom * Com;
 	AnalogCANJaguarPipeServer * PipeServer;
 
 	uint8_t GroupAddress;
+
+	MSG_Q_ID SendMessageQueue;
+	MSG_Q_ID ReceiveMessageQueue;
+	SEM_ID ResponseSemaphore;
+
+	Task * ServerTask;
+
+	bool Started;
+
+	static int _StartServerTask ( PICServoController * This );
 
 };
 

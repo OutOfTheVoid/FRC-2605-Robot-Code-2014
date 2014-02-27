@@ -33,7 +33,7 @@ CANJaguarServer :: CANJaguarServer ( bool DoBrownOutCheck, double BrownOutCheckI
 	Running = false;
 
 	// Server task. _StartServerTask calls this -> RunLoop.
-	ServerTask = new Task ( "FRC_2605_CANJaguarServer_Task", (FUNCPTR) & _StartServerTask, CANJAGSERVER_PRIORITY, CANJAGSERVER_STACKSIZE );
+	ServerTask = new Task ( "2605_CANJaguarServer_Task", (FUNCPTR) & _StartServerTask, CANJAGSERVER_PRIORITY, CANJAGSERVER_STACKSIZE );
 
 	// Array for Server Jaguar Information structures.
 	Jags = new Vector <ServerCanJagInfo> (); 

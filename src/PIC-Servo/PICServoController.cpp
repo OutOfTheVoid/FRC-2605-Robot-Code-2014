@@ -10,17 +10,63 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 	for ( uint8_t i = 0; i != 255; i ++ )
 		Modules [ i ] = NULL;
 
-	Com = new PICServoCom ();
-	PipeServer = new AnalogCANJaguarPipeServer ();
+	Started = false;
 
-	PipeServer -> Start ();
+	ServerTask = new Task ( "2605_PICServo_Control_Server_Task", reinterpret_cast <FUNCPTR> ( _StartServerTask ), PICSERVO_CONTROL_TASK_PRIORITY, PICSERVO_CONTROL_TASK_STACKSIZE );
+
+	SendMessageQueue = msgQCreate ( 200, sizeof ( ServerMessage * ), MSG_Q_FIFO );
+
+	if ( SendMessageQueue == NULL )
+		throw "PICServoController Error: Couldn't allocate a message queue for asynch command loop.";
+
+	ReceiveMessageQueue = msgQCreate ( 16, sizeof ( ServerMessage * ), MSG_Q_FIFO );
+
+	if ( ReceiveMessageQueue == NULL )
+	{
+
+		msgQDelete ( SendMessageQueue );
+
+		throw "PICServoController Error: Couldn't allocate a message queue for asynch command loop.";
+
+	}
+
+	ResponseSemaphore = semMCreate ( SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE );
+
+	if ( ResponseSemaphore == NULL )
+	{
+
+		msgQDelete ( SendMessageQueue );
+		msgQDelete ( ReceiveMessageQueue );
+
+		throw "PICServoController Error: Couldn't create Response synchronization semaphore.";
+
+	};
+
+	if ( ! ServerTask -> Start ( reinterpret_cast <uint32_t> ( this ) ) )
+	{
+
+		msgQDelete ( SendMessageQueue );
+		msgQDelete ( ReceiveMessageQueue );
+		semDelete ( ResponseSemaphore );
+
+	}
+
+	Started = true;
 
 };
 
 PICServoController :: ~PICServoController ()
 {
 
+	semTake ( ResponseSemaphore, WAIT_FOREVER );
 
+	ServerTask -> Stop ();
+
+	semGive ( ResponseSemaphore );
+
+	msgQDelete ( SendMessageQueue );
+	msgQDelete ( ReceiveMessageQueue );
+	semDelete ( ResponseSemaphore );
 
 };
 
@@ -38,6 +84,8 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 	Com -> SerialTaskLock ();
 
+	ServerMessage * ResponseMessage = NULL;
+
 	if ( Modules [ ModuleNumber ] != NULL )
 	{
 
@@ -48,8 +96,20 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 		Module -> MotorPipe = PipeServer -> AddPipe ( JaguarID, AnalogChannel, AnalogModule );
 
-		Com -> ModuleStopMotor ( ModuleNumber, false, true, true );
-		Com -> ReceiveStatusPacket ();
+		semTake ( ResponseSemaphore, WAIT_FOREVER );
+
+		ServerMessage * SendMessage = new ServerMessage ();
+
+		SendMessage -> Command = PICSERVO_REINIT_MESSAGE;
+		SendMessage -> Data = ModuleNumber;
+
+		msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+		delete ResponseMessage;
+
+		semGive ( ResponseSemaphore );
 
 	}
 	else
@@ -58,17 +118,37 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 		Module = new PICServo ( ModuleNumber, this, PipeServer -> AddPipe ( JaguarID, AnalogChannel, AnalogModule ) );
 		Modules [ ModuleNumber ] = Module;
 
+		semTake ( ResponseSemaphore, WAIT_FOREVER );
+
 		if ( Initialize )
 		{
 
-			Com -> ModuleSetAddress ( 0, ModuleNumber, GroupAddress );
-			Com -> ReceiveStatusPacket ();
+			ServerMessage * SendMessage = new ServerMessage ();
+
+			SendMessage -> Command = PICSERVO_INIT_MESSAGE;
+			SendMessage -> Data = ModuleNumber;
+
+			msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+			msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+			delete ResponseMessage;
+			ResponseMessage = NULL;
 
 		}
 
+		ServerMessage * SendMessage = new ServerMessage ();
 
-		Com -> ModuleStopMotor ( ModuleNumber, false, true, true );
-		Com -> ReceiveStatusPacket ();
+		SendMessage -> Command = PICSERVO_REINIT_MESSAGE;
+		SendMessage -> Data = ModuleNumber;
+
+		msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+		delete ResponseMessage;
+
+		semGive ( ResponseSemaphore );
 
 	}
 
@@ -86,161 +166,447 @@ PICServo * PICServoController :: GetModule ( uint8_t Module )
 void PICServoController :: PICServoEnable ( uint8_t ModuleNumber )
 {
 
-	PICServo * Module = Modules [ ModuleNumber ];
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	PipeServer -> EnablePipe ( Module -> MotorPipe );
+	SendMessage -> Command = PICSERVO_ENABLE_MESSAGE;
+	SendMessage -> Data = ModuleNumber;
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoDisable ( uint8_t ModuleNumber )
 {
 
-	PICServo * Module = Modules [ ModuleNumber ];
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	PipeServer -> DisablePipe ( Module -> MotorPipe );
+	SendMessage -> Command = PICSERVO_DISABLE_MESSAGE;
+	SendMessage -> Data = ModuleNumber;
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
 };
 
 void PICServoController :: PICServoSetPWM ( uint8_t ModuleNumber, int16_t PWM )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleLoadTrajectory ( ModuleNumber, 0, 0, 0, PWM, false, false, false, true, false, false, false, true );
-	Com -> ReceiveStatusPacket ();
+	SetPWMMessage * SPMessage = new SetPWMMessage ();
 
-	Com -> SerialTaskUnlock ();
+	SPMessage -> Index = ModuleNumber;
+	SPMessage -> Value = PWM;
+
+	SendMessage -> Command = PICSERVO_SETPWM_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( SPMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoSetPosition ( uint8_t ModuleNumber, double Position )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleLoadTrajectory ( ModuleNumber, static_cast <uint32_t> ( Position ), 0.0, 0.0, 0, true, false, false, false, true, false, false, true );
-	Com -> ReceiveStatusPacket ();
+	SetPositionMessage * PMessage = new SetPositionMessage ();
 
-	Com -> SerialTaskUnlock ();
+	PMessage -> Index = ModuleNumber;
+	PMessage -> Position = Position;
+
+	SendMessage -> Command = PICSERVO_SETPOSITION_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( PMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoSetPositionV ( uint8_t ModuleNumber, double Position, double Velocity )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleLoadTrajectory ( ModuleNumber, static_cast <uint32_t> ( Position ), static_cast <uint32_t> ( Velocity ), 0.0, 0, true, true, false, false, true, false, false, true );
-	Com -> ReceiveStatusPacket ();
+	SetPositionVMessage * PVMessage = new SetPositionVMessage ();
 
-	Com -> SerialTaskUnlock ();
+	PVMessage -> Index = ModuleNumber;
+	PVMessage -> Position = Position;
+	PVMessage -> Velocity = Velocity;
+
+	SendMessage -> Command = PICSERVO_SETPOSITIONV_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( PVMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoSetPositionA ( uint8_t ModuleNumber, double Position, double Acceleration )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleLoadTrajectory ( ModuleNumber, static_cast <uint32_t> ( Position ), 0.0, static_cast <uint32_t> ( Acceleration ), 0, true, false, true, false, true, false, false, true );
-	Com -> ReceiveStatusPacket ();
+	SetPositionAMessage * PAMessage = new SetPositionAMessage ();
 
-	Com -> SerialTaskUnlock ();
+	PAMessage -> Index = ModuleNumber;
+	PAMessage -> Position = Position;
+	PAMessage -> Acceleration = Acceleration;
+
+	SendMessage -> Command = PICSERVO_SETPOSITIONA_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( PAMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoSetPositionVA ( uint8_t ModuleNumber, double Position, double Velocity, double Acceleration )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleLoadTrajectory ( ModuleNumber, static_cast <uint32_t> ( Position ), Velocity, Acceleration, 0, true, true, true, false, true, false, false, true );
-	Com -> ReceiveStatusPacket ();
+	SetPositionVAMessage * PVAMessage = new SetPositionVAMessage ();
 
-	Com -> SerialTaskUnlock ();
+	PVAMessage -> Index = ModuleNumber;
+	PVAMessage -> Position = Position;
+	PVAMessage -> Velocity = Velocity;
+	PVAMessage -> Acceleration = Acceleration;
+
+	SendMessage -> Command = PICSERVO_SETPOSITIONVA_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( PVAMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoResetPosition ( uint8_t ModuleNumber )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleResetPosition ( ModuleNumber, false );
-	Com -> ReceiveStatusPacket ();
+	SendMessage -> Command = PICSERVO_RESETPOSITION_MESSAGE;
+	SendMessage -> Data = ModuleNumber;
 
-	Com -> SerialTaskUnlock ();
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoSetCurrentPosition ( uint8_t ModuleNumber, double Position )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleOverwritePosition ( ModuleNumber, static_cast <int32_t> ( Position ) );
-	Com -> ReceiveStatusPacket ();
+	SetCurrentPositionMessage * SCPMessage = new SetCurrentPositionMessage ();
 
-	Com -> SerialTaskUnlock ();
+	SCPMessage -> Index = ModuleNumber;
+	SCPMessage -> Position = Position;
+
+	SendMessage -> Command = PICSERVO_SETCURRENTPOSITION_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( SCPMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 double PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
 {
 
-	PICServoCom :: PICServoStatus_t Status;
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> SerialTaskLock ();
+	SendMessage -> Command = PICSERVO_RESETPOSITION_MESSAGE;
+	SendMessage -> Data = ModuleNumber;
 
-	Com -> ModuleReadStatus ( ModuleNumber, PICSERVO_STATUS_TYPE_POSITION, & Status );
+	semTake ( ResponseSemaphore, WAIT_FOREVER );
 
-	Com -> SerialTaskUnlock ();
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
-	return Status.Position;
+	ServerMessage * ResponseMessage = NULL;
+	msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+	semGive ( ResponseSemaphore );
+
+	double Position = static_cast <double> ( ResponseMessage -> Data );
+
+	delete ResponseMessage;
+	return Position;
 
 };
 
 void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleSetMetrics ( ModuleNumber, static_cast <uint16_t> ( P * 1024 ), static_cast <uint16_t> ( I * 1024 ), static_cast <uint16_t> ( D * 1024 ) );
-	Com -> ReceiveStatusPacket ();
+	SetPIDMessage * SPIDMessage = new SetPIDMessage ();
 
-	Com -> SerialTaskUnlock ();
+	SPIDMessage -> Index = ModuleNumber;
+	SPIDMessage -> P = P;
+	SPIDMessage -> I = I;
+	SPIDMessage -> D = D;
 
-};
+	SendMessage -> Command = PICSERVO_SETPID_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( SPIDMessage );
 
-void PICServoController :: PICServoSetVelocityA ( uint8_t ModuleNumber, double Velocity, double Acceleration )
-{
-
-	Com -> SerialTaskLock ();
-
-	Com -> ModuleLoadTrajectory ( ModuleNumber, 0, Velocity, Acceleration, 0, false, true, true, false, true, true, false, true );
-	Com -> ReceiveStatusPacket ();
-
-	Com -> SerialTaskUnlock ();
-
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
 
 void PICServoController :: PICServoSetVelocity ( uint8_t ModuleNumber, double Velocity )
 {
 
-	Com -> SerialTaskLock ();
+	ServerMessage * SendMessage = new ServerMessage ();
 
-	Com -> ModuleLoadTrajectory ( ModuleNumber, 0, Velocity, 0, 0, false, true, false, false, true, true, false, true );
-	Com -> ReceiveStatusPacket ();
+	SetVelocityMessage * VMessage = new SetVelocityMessage ();
 
-	Com -> SerialTaskUnlock ();
+	VMessage -> Index = ModuleNumber;
+	VMessage -> Velocity = Velocity;
 
+	SendMessage -> Command = PICSERVO_SETVELOCITY_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( VMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 };
 
-/*AnalogCANJaguarPipe_t PICServoController :: GetPipeID ( uint8_t ModuleNumber )
+void PICServoController :: PICServoSetVelocityA ( uint8_t ModuleNumber, double Velocity, double Acceleration )
 {
 
-	if (  )
+	ServerMessage * SendMessage = new ServerMessage ();
+
+	SetVelocityAMessage * VAMessage = new SetVelocityAMessage ();
+
+	VAMessage -> Index = ModuleNumber;
+	VAMessage -> Velocity = Velocity;
+	VAMessage -> Acceleration = Acceleration;
+
+	SendMessage -> Command = PICSERVO_SETVELOCITYA_MESSAGE;
+	SendMessage -> Data = reinterpret_cast <uint32_t> ( VAMessage );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
 
 };
-*/
+
+void PICServoController :: RunLoop ()
+{
+
+	Com = new PICServoCom ();
+
+	PipeServer = new AnalogCANJaguarPipeServer ();
+	PipeServer -> Start ();
+
+	ServerMessage * Message = NULL;
+	ServerMessage * ResponseMessage = NULL;
+
+	PICServo * Module = NULL;
+
+	while ( true )
+	{
+
+		if ( msgQReceive ( SendMessageQueue, reinterpret_cast <char *> ( & Message ), sizeof ( ServerMessage * ), WAIT_FOREVER ) != ERROR )
+		{
+
+			switch ( Message -> Command )
+			{
+
+			case PICSERVO_DISABLE_MESSAGE:
+
+				Module = Modules [ Message -> Data ];
+				PipeServer -> DisablePipe ( Module -> MotorPipe );
+
+				delete Message;
+
+				break;
+
+			case PICSERVO_ENABLE_MESSAGE:
+
+				Module = Modules [ Message -> Data ];
+				PipeServer -> EnablePipe ( Module -> MotorPipe );
+
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETPWM_MESSAGE:
+
+				SetPWMMessage * SPMessage = reinterpret_cast <SetPWMMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( SPMessage -> Index, 0, 0, 0, SPMessage -> Value, false, false, false, true, false, false, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete SPMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETPOSITION_MESSAGE:
+
+				SetPositionMessage * PMessage = reinterpret_cast <SetPositionMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( PMessage -> Index, static_cast <uint32_t> ( PMessage -> Position ), 0.0, 0.0, 0, true, false, false, false, true, false, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete PMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETPOSITIONV_MESSAGE:
+
+				SetPositionVMessage * PVMessage = reinterpret_cast <SetPositionVMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( PMessage -> Index, static_cast <uint32_t> ( PVMessage -> Position ), PVMessage -> Velocity, 0.0, 0, true, true, false, false, true, false, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete PVMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETPOSITIONA_MESSAGE:
+
+				SetPositionAMessage * PAMessage = reinterpret_cast <SetPositionAMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( PAMessage -> Index, static_cast <uint32_t> ( PAMessage -> Position ), 0.0, PAMessage -> Acceleration, 0, true, false, true, false, true, false, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete PAMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETPOSITIONVA_MESSAGE:
+
+				SetPositionVAMessage * PAVMessage = reinterpret_cast <SetPositionVAMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( PAVMessage -> Index, static_cast <uint32_t> ( PAVMessage -> Position ), PAVMessage -> Velocity, PAVMessage -> Acceleration, 0, true, true, true, false, true, false, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete PAVMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_RESETPOSITION_MESSAGE:
+
+				Com -> ModuleResetPosition ( Message -> Data, false );
+				Com -> ReceiveStatusPacket ();
+
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETCURRENTPOSITION_MESSAGE:
+
+				SetCurrentPositionMessage * SCPMessage = reinterpret_cast <SetCurrentPositionMessage *> ( Message -> Data );
+
+				Com -> ModuleOverwritePosition ( SCPMessage -> Index, static_cast <int32_t> ( SCPMessage -> Position ) );
+				Com -> ReceiveStatusPacket ();
+
+				delete SCPMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_READPOSITION_MESSAGE:
+
+				PICServoCom :: PICServoStatus_t Status;
+				Com -> ModuleReadStatus ( Message -> Data, PICSERVO_STATUS_TYPE_POSITION, & Status );
+
+				ResponseMessage = new ServerMessage ();
+
+				ResponseMessage -> Command = PICSERVO_READPOSITION_MESSAGE;
+				ResponseMessage -> Data = Status.Position;
+
+				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETVELOCITY_MESSAGE:
+
+				SetVelocityMessage * SVMessage = reinterpret_cast <SetVelocityMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( SVMessage -> Index, 0, SVMessage -> Velocity, 0, 0, false, true, false, false, true, true, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete SVMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETVELOCITYA_MESSAGE:
+
+				SetVelocityAMessage * SVAMessage = reinterpret_cast <SetVelocityAMessage *> ( Message -> Data );
+
+				Com -> ModuleLoadTrajectory ( SVAMessage -> Index, 0, SVAMessage -> Velocity, SVAMessage -> Acceleration, 0, false, true, true, false, true, true, false, true );
+				Com -> ReceiveStatusPacket ();
+
+				delete SVAMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_SETPID_MESSAGE:
+
+				SetPIDMessage * SPIDMessage = reinterpret_cast <SetPIDMessage *> ( Message -> Data );
+
+				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ) );
+				Com -> ReceiveStatusPacket ();
+
+				delete SPIDMessage;
+				delete Message;
+
+				break;
+
+			case PICSERVO_INIT_MESSAGE:
+
+				Com -> ModuleSetAddress ( 0, Message -> Data, GroupAddress );
+				Com -> ReceiveStatusPacket ();
+
+				ResponseMessage = new ServerMessage ();
+
+				ResponseMessage -> Command = PICSERVO_INIT_MESSAGE;
+				ResponseMessage -> Data = 0;
+
+				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+				delete Message;
+
+				break;
+
+			case PICSERVO_REINIT_MESSAGE:
+
+				Com -> ModuleStopMotor ( Message -> Data, false, true, true );
+				Com -> ReceiveStatusPacket ();
+
+				ResponseMessage = new ServerMessage ();
+
+				ResponseMessage -> Command = PICSERVO_REINIT_MESSAGE;
+				ResponseMessage -> Data = 0;
+
+				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+				delete Message;
+
+				break;
+
+			default:
+
+				if ( Message != NULL )
+					delete Message;
+
+				break;
+
+			}
+
+		}
+
+	}
+
+};
+
+int PICServoController :: _StartServerTask ( PICServoController * This )
+{
+
+	This -> RunLoop ();
+
+	return 0;
+
+};

@@ -113,8 +113,8 @@ Robot :: Robot ():
 	PServer = new AnalogCANJaguarPipeServer ();
 
 	PServer -> Start ();
-	//AnalogCANJaguarPipe_t Pipe = PServer -> AddPipe ( 4, 3, 1 );
-	//PServer -> EnablePipe ( Pipe );
+	AnalogCANJaguarPipe_t Pipe = PServer -> AddPipe ( 4, 3, 1 );
+	PServer -> EnablePipe ( Pipe );
 
 	SCom = new PICServoCom ();
 
@@ -481,14 +481,12 @@ void Robot :: TestInit ()
 void Robot :: TestPeriodic ()
 {
 
-	PICServoCom :: PICServoStatus_t Status;
+	if ( StrafeStick -> GetRawButton ( 6 ) )
+		SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 20, false, false, false, true, false, false, false, true );
+	else
+		SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 0, false, false, false, true, false, false, false, true );
 
-	SCom -> ModuleStopMotor ( 1, false, false, true );
 	SCom -> ReceiveStatusPacket ();
-
-	SCom -> GetStatus ( & Status );
-
-	printf ( "PICServo flags: %x\n", (int) Status.StandardFlags );
 
 };
 
@@ -546,7 +544,7 @@ void Robot :: DisabledInit ()
 void Robot :: DisabledPeriodic ()
 {
 
-
+	RotationGyro -> Reset ();
 
 };
 
