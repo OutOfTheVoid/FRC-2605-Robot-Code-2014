@@ -490,7 +490,7 @@ void Robot :: TestPeriodic ()
 
 	SCom -> GetStatus ( & Status );
 
-	printf ( "PICServo status: %i\n", Status.Position );
+	printf ( "PICServo position: %i\n", Status.Position );
 
 };
 

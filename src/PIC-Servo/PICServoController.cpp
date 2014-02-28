@@ -426,8 +426,12 @@ void PICServoController :: RunLoop ()
 
 				SetPWMMessage * SPMessage = reinterpret_cast <SetPWMMessage *> ( Message -> Data );
 
+				Module = Modules [ SPMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( SPMessage -> Index, 0, 0, 0, SPMessage -> Value, false, false, false, true, false, false, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete SPMessage;
 				delete Message;
@@ -438,8 +442,12 @@ void PICServoController :: RunLoop ()
 
 				SetPositionMessage * PMessage = reinterpret_cast <SetPositionMessage *> ( Message -> Data );
 
+				Module = Modules [ PMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( PMessage -> Index, static_cast <uint32_t> ( PMessage -> Position ), 0.0, 0.0, 0, true, false, false, false, true, false, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete PMessage;
 				delete Message;
@@ -450,8 +458,12 @@ void PICServoController :: RunLoop ()
 
 				SetPositionVMessage * PVMessage = reinterpret_cast <SetPositionVMessage *> ( Message -> Data );
 
+				Module = Modules [ PVMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( PMessage -> Index, static_cast <uint32_t> ( PVMessage -> Position ), PVMessage -> Velocity, 0.0, 0, true, true, false, false, true, false, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete PVMessage;
 				delete Message;
@@ -462,8 +474,12 @@ void PICServoController :: RunLoop ()
 
 				SetPositionAMessage * PAMessage = reinterpret_cast <SetPositionAMessage *> ( Message -> Data );
 
+				Module = Modules [ PAMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( PAMessage -> Index, static_cast <uint32_t> ( PAMessage -> Position ), 0.0, PAMessage -> Acceleration, 0, true, false, true, false, true, false, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete PAMessage;
 				delete Message;
@@ -474,8 +490,12 @@ void PICServoController :: RunLoop ()
 
 				SetPositionVAMessage * PAVMessage = reinterpret_cast <SetPositionVAMessage *> ( Message -> Data );
 
+				Module = Modules [ PAVMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( PAVMessage -> Index, static_cast <uint32_t> ( PAVMessage -> Position ), PAVMessage -> Velocity, PAVMessage -> Acceleration, 0, true, true, true, false, true, false, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete PAVMessage;
 				delete Message;
@@ -484,8 +504,12 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_RESETPOSITION_MESSAGE:
 
+				Module = Modules [ Message -> Data ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleResetPosition ( Message -> Data, false );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete Message;
 
@@ -495,8 +519,12 @@ void PICServoController :: RunLoop ()
 
 				SetCurrentPositionMessage * SCPMessage = reinterpret_cast <SetCurrentPositionMessage *> ( Message -> Data );
 
+				Module = Modules [ SCPMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleOverwritePosition ( SCPMessage -> Index, static_cast <int32_t> ( SCPMessage -> Position ) );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete SCPMessage;
 				delete Message;
@@ -523,8 +551,12 @@ void PICServoController :: RunLoop ()
 
 				SetVelocityMessage * SVMessage = reinterpret_cast <SetVelocityMessage *> ( Message -> Data );
 
+				Module = Modules [ SVMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( SVMessage -> Index, 0, SVMessage -> Velocity, 0, 0, false, true, false, false, true, true, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete SVMessage;
 				delete Message;
@@ -535,8 +567,12 @@ void PICServoController :: RunLoop ()
 
 				SetVelocityAMessage * SVAMessage = reinterpret_cast <SetVelocityAMessage *> ( Message -> Data );
 
+				Module = Modules [ SVAMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( SVAMessage -> Index, 0, SVAMessage -> Velocity, SVAMessage -> Acceleration, 0, false, true, true, false, true, true, false, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete SVAMessage;
 				delete Message;
@@ -547,8 +583,12 @@ void PICServoController :: RunLoop ()
 
 				SetPIDMessage * SPIDMessage = reinterpret_cast <SetPIDMessage *> ( Message -> Data );
 
+				Module = Modules [ SPIDMessage -> Index ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ) );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				delete SPIDMessage;
 				delete Message;
@@ -557,8 +597,12 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_INIT_MESSAGE:
 
+				Module = Modules [ Message -> Data ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleSetAddress ( 0, Message -> Data, GroupAddress );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				ResponseMessage = new ServerMessage ();
 
@@ -573,8 +617,12 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_REINIT_MESSAGE:
 
+				Module = Modules [ Message -> Data ];
+
+				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleStopMotor ( Message -> Data, false, true, true );
 				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				ResponseMessage = new ServerMessage ();
 

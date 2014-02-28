@@ -17,6 +17,8 @@ PICServo :: PICServo ( uint8_t ModuleAddress, PICServoController * Controller, A
 	NewVelocity = false;
 	NewAcceleration = false;
 
+	StatusType = 0x00;
+
 };
 
 PICServo :: ~PICServo ()

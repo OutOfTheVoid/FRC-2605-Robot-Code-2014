@@ -3,6 +3,7 @@
 
 #include "PICServoController.h"
 #include "AnalogCANJaguarPipeServer.h"
+#include "PICServoCom.h"
 
 #define PICSERVO_SERVO_RATE 1953.125
 
@@ -64,6 +65,10 @@ private:
 
 	PICServoControlMode ControlMode;
 	bool Enabled;
+
+	uint8_t StatusType;
+
+	PICServoCom :: PICServoStatus_t LastStatus;
 
 };
 

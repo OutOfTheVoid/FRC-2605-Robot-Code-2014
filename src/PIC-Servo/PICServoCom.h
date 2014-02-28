@@ -84,6 +84,7 @@ public:
 	void ModuleHardReset ( uint8_t Module, bool SaveConfigInEERROM, bool RestoreAddresses, bool AmplifierEnabled, bool ServoEnabled, bool StepAndDirectionEnabled, bool LimitAndStopEnabled, bool ThreePhaseComEnabled, bool AntiphasePWMEnabled );
 	void ModuleLoadTrajectory ( uint8_t Module, int32_t Position, double Velocity, double Acceleration, int16_t PWM, bool LoadPosition, bool LoadVelocity, bool LoadAcceleration, bool LoadPWM, bool EnableServo, bool VelocityProfileMode = true, bool RelativePosition = 0, bool ImmediateMotion = true );
 
+	void SetStatusType ( uint8_t Type );
 	void ReceiveStatusPacket ();
 
 	void GetStatus ( PICServoStatus_t * Status );
