@@ -55,7 +55,7 @@ public:
 	{
 
 		uint8_t StandardFlags;
-		uint32_t Position;
+		int32_t Position;
 		uint8_t CurrentSense;
 		uint16_t EncoderVelocity;
 		uint8_t AuxiliaryStatus;

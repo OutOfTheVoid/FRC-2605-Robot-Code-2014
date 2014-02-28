@@ -476,17 +476,21 @@ void Robot :: TestInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
 
+	SCom -> ModuleResetPosition ( 1 );
+	SCom -> ReceiveStatusPacket ();
+
 };
 
 void Robot :: TestPeriodic ()
 {
 
-	if ( StrafeStick -> GetRawButton ( 6 ) )
-		SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 20, false, false, false, true, false, false, false, true );
-	else
-		SCom -> ModuleLoadTrajectory ( 1, 0, 0, 0, 0, false, false, false, true, false, false, false, true );
+	PICServoCom :: PICServoStatus_t Status;
 
-	SCom -> ReceiveStatusPacket ();
+	SCom -> ModuleReadStatus ( 1, PICSERVO_STATUS_TYPE_POSITION, & Status );
+
+	SCom -> GetStatus ( & Status );
+
+	printf ( "PICServo status: %i\n", Status.Position );
 
 };
 

@@ -6,8 +6,8 @@ PICServoCom :: PICServoCom ()
 	Com = new SerialDriver ( 19200 );
 	Com -> SetFlowControl ( SerialDriver :: FlowControl_None );
 	Com -> SetTimeout ( 0.1 );
-	Com -> SetReadBufferSize ( 0x20 );
-	Com -> SetWriteBufferSize ( 0x20 );
+	Com -> SetReadBufferSize ( 0x400 );
+	Com -> SetWriteBufferSize ( 0x400 );
 	Com -> Clear ();
 
 	Com -> FlushReadBuffer ();
@@ -35,7 +35,7 @@ void PICServoCom :: ModuleResetPosition ( uint8_t Module, bool Relative )
 		
 		uint8_t Data [ 0 ] = {};
 
-		SendMessage ( Module, PICSERVO_COMMAND_RESET_POS | PICSERVO_RESET_POSITION_DATASIZE_0, Data, 0 );
+		SendMessage ( Module, PICSERVO_COMMAND_RESET_POS, Data, 0 );
 	
 	}
 	else
@@ -538,6 +538,7 @@ void PICServoCom :: SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Da
 
 	Com -> Write ( DataBuffer, 4 + DataSize );
 	Com -> FlushWriteBuffer ();
+	Com -> FlushDeviceWrite ();
 
 };
 
@@ -548,12 +549,14 @@ bool PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint32_t Count )
 	{
 
 		Com -> FlushReadBuffer ();
+		Com -> FlushDeviceRead ();
 
 		return true;
 
 	}
 
 	Com -> FlushReadBuffer ();
+	Com -> FlushDeviceRead ();
 
 	return false;
 
