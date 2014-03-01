@@ -118,6 +118,8 @@ Robot :: Robot ():
 
 	SCom = new PICServoCom ();
 
+	LastPosSet = false;
+
 };
 
 Robot :: ~Robot ()
@@ -476,8 +478,22 @@ void Robot :: TestInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
 
+	//SCom -> SetStatusType ( 0 );
+	//SCom -> ModuleDefineStatus ( 1, 0 );
+	//SCom -> ReceiveStatusPacket ();
+	//SCom -> ModuleClearStatus ( 1 );
+	//SCom -> ReceiveStatusPacket ();
 	SCom -> ModuleResetPosition ( 1 );
 	SCom -> ReceiveStatusPacket ();
+	SCom -> ModuleSetMetrics ( 1, 500, 1000, 0, 32767, 255, 0, 800 );
+	SCom -> ReceiveStatusPacket ();
+	SCom -> SetStatusType ( PICSERVO_STATUS_TYPE_POSITION );
+	SCom -> ModuleDefineStatus ( 1, PICSERVO_STATUS_TYPE_POSITION );
+	SCom -> ReceiveStatusPacket ();
+	SCom -> ModuleStopMotor ( 1, 1 );
+	SCom -> ReceiveStatusPacket ();
+
+	LastPosSet = true;
 
 };
 
@@ -486,11 +502,33 @@ void Robot :: TestPeriodic ()
 
 	PICServoCom :: PICServoStatus_t Status;
 
-	SCom -> ModuleReadStatus ( 1, PICSERVO_STATUS_TYPE_POSITION, & Status );
+	if ( StrafeStick -> GetRawButton ( 6 ) )
+	{
+		
+		if ( LastPosSet )
+			SCom -> ModuleLoadTrajectory ( 1, 120, 3.0, 0.003, 0, true, true, true, false, true, false, false );
+		else
+			SCom -> ModuleGetStatus ( 1 );
 
+		LastPosSet = false;
+
+	}
+	else
+	{
+
+		if ( ! LastPosSet )
+			SCom -> ModuleLoadTrajectory ( 1, 0, 3.0, 0.003, 0, true, true, true, false, true, false, false );
+		else
+			SCom -> ModuleGetStatus ( 1 );
+	
+		LastPosSet = true;
+
+	}
+
+	SCom -> ReceiveStatusPacket ();
 	SCom -> GetStatus ( & Status );
 
-	printf ( "PICServo position: %i\n", Status.Position );
+	printf ( "Position: %i\n", Status.Position );
 
 };
 

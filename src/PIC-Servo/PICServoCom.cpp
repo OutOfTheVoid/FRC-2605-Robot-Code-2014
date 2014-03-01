@@ -376,15 +376,13 @@ void PICServoCom :: ModuleLoadTrajectory ( uint8_t Module, int32_t Position, dou
 
 	uint8_t Counter = 1;
 
-	uint32_t * PositionData = reinterpret_cast <uint32_t *> ( & Position );
-
 	if ( LoadPosition )
 	{
 
-		Data [ 1 ] = ( * PositionData ) & 0xFF;
-		Data [ 2 ] = ( ( * PositionData ) >> 8 ) & 0xFF;
-		Data [ 3 ] = ( ( * PositionData ) >> 16 ) & 0xFF;
-		Data [ 4 ] = ( ( * PositionData ) >> 24 ) & 0xFF;
+		Data [ 1 ] = Position & 0xFF;
+		Data [ 2 ] = ( Position >> 8 ) & 0xFF;
+		Data [ 3 ] = ( Position >> 16 ) & 0xFF;
+		Data [ 4 ] = ( Position >> 24 ) & 0xFF;
 
 		Counter += 4;
 
@@ -429,12 +427,26 @@ void PICServoCom :: ModuleLoadTrajectory ( uint8_t Module, int32_t Position, dou
 	if ( LoadPWM )
 	{
 
+		if ( PWM < 0 )
+			PWM = - PWM;
+
 		if ( PWM > 0xFF )
 			PWM = 0xFF;
 
 		Data [ Counter ] = PWM;
 
+		Counter ++;
+
 	}
+
+	printf ( "LOAD TRAJECTORY COMMAND:\n[ aa %x %x ", Module, PICSERVO_COMMAND_LOAD_TRAJ | ( ( Counter << 4 ) & 0xF0 ) );
+
+	for ( int32_t i = 0; i < Counter; i ++ )
+		printf ( " %x", Data [ i ] );
+
+	printf ( " ]\n" );
+
+	SendMessage ( Module, PICSERVO_COMMAND_LOAD_TRAJ | ( ( Counter << 4 ) & 0xF0 ), Data, DataSize );
 
 };
 
@@ -457,17 +469,8 @@ void PICServoCom :: GetStatus ( PICServoStatus_t * Status )
 
 	uint8_t CheckSum = 0;
 
-	printf ( "Status: message\n[" );
-
-	for ( uint32_t i = 0; i < StatusSize; i ++ )
-	{
-
+	for ( int32_t i = 0; i < StatusSize - 1; i ++ )
 		CheckSum += StatusBytes [ i ];
-		printf ( " 0x%x", StatusBytes [ i ] );
-
-	}
-
-	printf ( " ]\n" );
 
 	if ( StatusType & PICSERVO_STATUS_TYPE_POSITION )
 	{
@@ -493,7 +496,7 @@ void PICServoCom :: GetStatus ( PICServoStatus_t * Status )
 	if ( StatusType & PICSERVO_STATUS_TYPE_ENCODER_VELOCITY )
 	{
 
-		Status -> EncoderVelocity = StatusBytes [ Counter ];
+		Status -> EncoderVelocity = static_cast <uint16_t> ( StatusBytes [ Counter ] );
 		Status -> EncoderVelocity |= static_cast <uint16_t> ( StatusBytes [ Counter + 1 ] ) << 8;
 
 		Counter += 2;
@@ -534,7 +537,7 @@ void PICServoCom :: GetStatus ( PICServoStatus_t * Status )
 	if ( StatusType & PICSERVO_STATUS_TYPE_SERVO_ERROR )
 	{
 
-		Status -> PositionError = StatusBytes [ Counter ];
+		Status -> PositionError = static_cast <uint16_t> ( StatusBytes [ Counter ] );
 		Status -> PositionError |= static_cast <uint16_t> ( StatusBytes [ Counter + 1 ] ) << 8;
 
 		Counter += 2;
@@ -608,7 +611,7 @@ bool PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint32_t Count )
 
 	}
 
-	
+
 	Com -> FlushReadBuffer ();
 	Com -> FlushDeviceRead ();
 

@@ -197,6 +197,10 @@ private:
 
 	PICServoCom * SCom;
 
+	// TEST VARIABLES
+
+	bool LastPosSet;
+
 };
 
 START_ROBOT_CLASS ( Robot );
