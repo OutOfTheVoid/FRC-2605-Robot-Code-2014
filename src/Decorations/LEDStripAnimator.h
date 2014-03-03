@@ -33,6 +33,8 @@ public:
 
 	void SetFrame ( uint32_t Frame, uint32_t * PixelColors, uint32_t PixelCount, uint32_t Offset, double Time );
 
+	void SetInstantaneousDispatch ( bool Instantaneous );
+
 	double GetRemainingFrameTime ();
 	void WaitTillNextFrame ();
 
@@ -53,6 +55,8 @@ private:
 	uint32_t CurrentFrame;
 
 	bool DispatchNext;
+
+	bool DispatchInstantaneous;
 
 	bool Started;
 	bool Running;

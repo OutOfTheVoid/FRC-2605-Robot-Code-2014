@@ -199,3 +199,17 @@ void PICServo :: SetPID ( double P, double I, double D )
 	Controller -> PICServoSetPID ( ModuleNumber, P, I, D );
 
 };
+
+void PICServo :: CalibrateAnalog ()
+{
+
+	Controller -> PICServoCalibrateAnalog ( ModuleNumber );
+
+};
+
+void PICServo :: SetAnalogInverted ( bool Inverted )
+{
+
+	Controller -> PICServoSetAnalogInverted ( ModuleNumber, Inverted );
+
+};

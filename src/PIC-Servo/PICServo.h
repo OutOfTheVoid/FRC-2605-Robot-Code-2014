@@ -44,6 +44,9 @@ public:
 
 	void SetPID ( double P, double I, double D );
 
+	void CalibrateAnalog ();
+	void SetAnalogInverted ( bool Inverted );
+
 private:
 
 	PICServo ( uint8_t ModuleAddress, PICServoController * Controller, AnalogCANJaguarPipe_t MotorPipe );

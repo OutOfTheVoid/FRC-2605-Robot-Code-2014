@@ -125,7 +125,7 @@ private:
 		PICSERVO_SETVELOCITYA_MESSAGE,
 		PICSERVO_SETPID_MESSAGE,
 		PICSERVO_INIT_MESSAGE,
-		PICSERVO_REINIT_MESSAGE
+		PICSERVO_REINIT_MESSAGE,
 
 	};
 
@@ -149,6 +149,9 @@ private:
 
 	void PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D );
 
+	void PICServoCalibrateAnalog ( uint8_t ModuleNumber );
+	void PICServoSetAnalogInverted ( uint8_t ModuleNumber, bool Inverted );
+
 	void RunLoop ();
 
 	PICServo ** Modules;
@@ -161,6 +164,7 @@ private:
 	MSG_Q_ID SendMessageQueue;
 	MSG_Q_ID ReceiveMessageQueue;
 	SEM_ID ResponseSemaphore;
+	SEM_ID ModuleSemaphore;
 
 	Task * ServerTask;
 

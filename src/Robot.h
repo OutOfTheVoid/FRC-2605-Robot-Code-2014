@@ -20,6 +20,8 @@
 
 #include "Sensors/PIDOutputSensor.h"
 
+#include "Decorations/SHSAnimations.h"
+
 #define DRIVE_RESPONSE_CURVE 2.0
 
 #define SPEED_SCALE_GEAR1 80
@@ -200,6 +202,12 @@ private:
 	// TEST VARIABLES
 
 	bool LastPosSet;
+
+	// LED STUFF
+
+	LEDStrip * LEDS;
+
+	LEDStripAnimator * TestAnimation;
 
 };
 

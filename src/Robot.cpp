@@ -99,26 +99,25 @@ Robot :: Robot ():
 	Wench = new ShooterWench ( WenchM );
 	Wench -> SetMotorScale ( WENCH_SPEED_SCALE );*/
 
-	/*PICServoControl = new PICServoController ();
+	PICServoControl = new PICServoController ();
 
 	printf ( "ADDING PIC SERVO...\n" );
 
-	PICServoControl -> AddPICServo ( 1, false, 4, 3 );
+	PICServoControl -> AddPICServo ( 2, false, 3, 3 );
 
 	printf ( "ADDED!\n" );
 
-	TestPICServo = PICServoControl -> GetModule ( 1 );
-	TestPICServo -> SetControlMode ( PICServo :: kPWM );*/
+	TestPICServo = PICServoControl -> GetModule ( 2 );
+	TestPICServo -> SetControlMode ( PICServo :: kPWM );
+	TestPICServo -> ConfigVelocity ( 1 );
+	TestPICServo -> ConfigAcceleration ( 1 );
+	TestPICServo -> SetPID ( 0.5, 0.01, 0.2 );
 
-	PServer = new AnalogCANJaguarPipeServer ();
+	//-----------------------------------------------//
 
-	PServer -> Start ();
-	AnalogCANJaguarPipe_t Pipe = PServer -> AddPipe ( 4, 3, 1 );
-	PServer -> EnablePipe ( Pipe );
+	LEDS = new LEDStrip ( 0, 1, 2, 10 );
 
-	SCom = new PICServoCom ();
-
-	LastPosSet = false;
+	TestAnimation = BuildTestAnimation ( LEDS );
 
 };
 
@@ -232,17 +231,25 @@ void Robot :: AutonomousInit ()
 	VisionTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 	AutonomousTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
+	LEDS -> Clear ();
+
 };
 
 void Robot :: AutonomousPeriodic ()
 {
 
+	TestAnimation -> Update ();
 
+	if ( LEDS -> HasNewData () )
+		LEDS -> PushColors ();
 
 };
 
 void Robot :: AutonomousEnd ()
 {
+
+	LEDS -> Clear ();
+	LEDS -> PushColors ();
 
 	AutonomousTask -> Stop ();
 	VisionTask -> Stop ();
@@ -478,23 +485,6 @@ void Robot :: TestInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
 
-	//SCom -> SetStatusType ( 0 );
-	//SCom -> ModuleDefineStatus ( 1, 0 );
-	//SCom -> ReceiveStatusPacket ();
-	//SCom -> ModuleClearStatus ( 1 );
-	//SCom -> ReceiveStatusPacket ();
-	SCom -> ModuleResetPosition ( 1 );
-	SCom -> ReceiveStatusPacket ();
-	SCom -> ModuleSetMetrics ( 1, 500, 1000, 0, 32767, 255, 0, 800 );
-	SCom -> ReceiveStatusPacket ();
-	SCom -> SetStatusType ( PICSERVO_STATUS_TYPE_POSITION );
-	SCom -> ModuleDefineStatus ( 1, PICSERVO_STATUS_TYPE_POSITION );
-	SCom -> ReceiveStatusPacket ();
-	SCom -> ModuleStopMotor ( 1, 1 );
-	SCom -> ReceiveStatusPacket ();
-
-	LastPosSet = true;
-
 };
 
 void Robot :: TestPeriodic ()
@@ -505,30 +495,17 @@ void Robot :: TestPeriodic ()
 	if ( StrafeStick -> GetRawButton ( 6 ) )
 	{
 		
-		if ( LastPosSet )
-			SCom -> ModuleLoadTrajectory ( 1, 120, 3.0, 0.003, 0, true, true, true, false, true, false, false );
-		else
-			SCom -> ModuleGetStatus ( 1 );
-
-		LastPosSet = false;
+		TestPICServo -> Set ( 120 );
 
 	}
 	else
 	{
 
-		if ( ! LastPosSet )
-			SCom -> ModuleLoadTrajectory ( 1, 0, 3.0, 0.003, 0, true, true, true, false, true, false, false );
-		else
-			SCom -> ModuleGetStatus ( 1 );
-	
-		LastPosSet = true;
+		TestPICServo -> Set ( 0 );
 
 	}
 
-	SCom -> ReceiveStatusPacket ();
-	SCom -> GetStatus ( & Status );
-
-	printf ( "Position: %i\n", Status.Position );
+	printf ( "Position: %i\n", TestPICServo -> GetPosition () );
 
 };
 
