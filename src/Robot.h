@@ -22,6 +22,10 @@
 
 #include "Decorations/SHSAnimations.h"
 
+#include "Controls/NumericStepper.h"
+
+#include "Util/Delegate.h"
+
 #define DRIVE_RESPONSE_CURVE 2.0
 
 #define SPEED_SCALE_GEAR1 80
@@ -74,6 +78,9 @@ public:
 	Robot ();
 	~Robot ();
 
+	void InitControls ();
+	void InitMotors ();
+
 	void DisabledInit ();
 	void DisabledPeriodic ();
 	void DisabledEnd ();
@@ -98,6 +105,7 @@ public:
 	static int TeleopTaskStub ( Robot * This );
 	static int VisionTaskStub ( Robot * This );
 
+	void OnShift ();
 	void ShiftVGear ( uint8_t Gear );
 
 	typedef enum
@@ -136,18 +144,12 @@ private:
 
 	CANJagConfigInfo WheelConfig;
 
-	Gyro * RotationGyro;
-	PIDController * RotationController;
-	PIDOutputSensor * RotationValue;
-
 	ExponentialFilter * DriveFilter;
 	DeadbandFilter * StickFilter;
 
-	uint8_t Gear;
+	ClassDelegate <Robot, void> * OnShiftDelegate;
+	NumericStepper * GearStepper;
 	double GearRPM;
-
-	bool GearUpPreState;
-	bool GearDownPreState;
 
 	// Input
 
@@ -170,17 +172,11 @@ private:
 	// Shooter
 
 	CANJagConfigInfo BeltConfig;
-	CANJagConfigInfo ArmConfig;
 
 	AsynchCANJaguar * BeltL;
 	AsynchCANJaguar * BeltR;
 
-	AsynchCANJaguar * ArmL;
-	AsynchCANJaguar * ArmR;
-
 	ShooterBelts * Shooter;
-
-	double IntendedArmPosition;
 
 	// Wench
 
@@ -191,13 +187,9 @@ private:
 
 	// PIC-Servo
 
-	AnalogCANJaguarPipeServer * PServer;
-
 	PICServoController * PICServoControl;
 
 	PICServo * TestPICServo;
-
-	PICServoCom * SCom;
 
 	// TEST VARIABLES
 

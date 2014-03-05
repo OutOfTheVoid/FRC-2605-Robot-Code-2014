@@ -19,6 +19,8 @@ PICServo :: PICServo ( uint8_t ModuleAddress, PICServoController * Controller, A
 
 	StatusType = 0x00;
 
+	this -> Enabled = false;
+
 };
 
 PICServo :: ~PICServo ()
@@ -83,7 +85,7 @@ double PICServo :: Get ()
 double PICServo :: GetPosition ()
 {
 
-	return static_cast <double> ( Controller -> PICServoReadPosition ( ModuleNumber ) ) / static_cast <double> ( EncoderCount );
+	return ( static_cast <double> ( Controller -> PICServoReadPosition ( ModuleNumber ) ) / static_cast <double> ( EncoderCount ) );
 
 };
 

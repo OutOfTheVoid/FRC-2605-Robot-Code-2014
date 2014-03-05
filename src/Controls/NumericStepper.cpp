@@ -62,6 +62,8 @@ void NumericStepper :: Set ( int32_t Value )
 void NumericStepper :: Update ()
 {
 
+	int32_t OldValue = Value;
+
 	bool NewUpButtonState = Device -> GetRawButton ( UpButton );
 	bool NewDownButtonState = Device -> GetRawButton ( DownButton );
 
@@ -79,5 +81,15 @@ void NumericStepper :: Update ()
 
 	UpButtonState = NewUpButtonState;
 	DownButtonState = NewDownButtonState;
+
+	if ( OldValue != Value && OnChange != NULL )
+		OnChange -> Call ();
+
+};
+
+void NumericStepper :: SetChangeListener ( Delegate <void> * Listener )
+{
+
+	OnChange = Listener;
 
 };

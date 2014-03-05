@@ -3,6 +3,9 @@
 PICServoController :: PICServoController ( uint8_t GroupAddress )
 {
 
+	PipeServer = new AnalogCANJaguarPipeServer ();
+	PipeServer -> Start ();
+
 	this -> GroupAddress = GroupAddress;
 
 	Modules = new PICServo * [ 256 ];
@@ -19,7 +22,7 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 	if ( SendMessageQueue == NULL )
 		throw "PICServoController Error: Couldn't allocate a message queue for asynch command loop.";
 
-	ReceiveMessageQueue = msgQCreate ( 16, sizeof ( ServerMessage * ), MSG_Q_FIFO );
+	ReceiveMessageQueue = msgQCreate ( 20, sizeof ( ServerMessage * ), MSG_Q_FIFO );
 
 	if ( ReceiveMessageQueue == NULL )
 	{
@@ -84,6 +87,9 @@ PICServoController :: ~PICServoController ()
 
 	semGive ( ResponseSemaphore );
 
+	delete PipeServer;
+	delete Com;
+
 };
 
 void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, CAN_ID JaguarID, uint8_t AnalogChannel )
@@ -100,31 +106,20 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 	ServerMessage * ResponseMessage = NULL;
 
-	printf ( "Taking Module Access Semaphore...\n" );
-
 	semTake ( ModuleSemaphore, WAIT_FOREVER );
+	semTake ( ResponseSemaphore, WAIT_FOREVER );
 
 	if ( Modules [ ModuleNumber ] != NULL )
 	{
 
-		printf ( "Reconfiguring existing module...\n" );
-
 		Module = Modules [ ModuleNumber ];
-
-		printf ( "Destroying Pipe...\n" );
 
 		PipeServer -> DisablePipe ( Module -> MotorPipe );
 		PipeServer -> RemovePipe ( Module -> MotorPipe );
 
-		printf ( "Createing new Pipe...\n" );
-
-		Module -> MotorPipe = PipeServer -> AddPipe ( JaguarID, AnalogChannel, AnalogModule );
-
-		printf ( "Taking Response Semaphore...\n" );
+		new (Module) PICServo ( ModuleNumber, this, Module -> MotorPipe = PipeServer -> AddPipe ( JaguarID, AnalogChannel, AnalogModule ) );
 
 		semTake ( ResponseSemaphore, WAIT_FOREVER );
-
-		printf ( "Sending REINIT Message...\n" );
 
 		ServerMessage * SendMessage = new ServerMessage ();
 
@@ -133,31 +128,20 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 		msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
-		printf ( "Waiting on receive message...\n" );
-
 		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
 
 		delete ResponseMessage;
-
-		semGive ( ResponseSemaphore );
 
 	}
 	else
 	{
 
-		printf ( "Creating PICServo object...\n" );
-
 		Module = new PICServo ( ModuleNumber, this, PipeServer -> AddPipe ( JaguarID, AnalogChannel, AnalogModule ) );
+
 		Modules [ ModuleNumber ] = Module;
-
-		printf ( "Taking response semaphore...\n" );
-
-		semTake ( ResponseSemaphore, WAIT_FOREVER );
 
 		if ( Initialize )
 		{
-
-			printf ( "Sending INIT Message...\n" );
 
 			ServerMessage * SendMessage = new ServerMessage ();
 
@@ -166,16 +150,12 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 			msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
-			printf ( "Waiting for response message...\n" );
-
 			msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
 
 			delete ResponseMessage;
 			ResponseMessage = NULL;
 
 		}
-
-		printf ( "Sending REINIT Message...\n" );
 
 		ServerMessage * SendMessage = new ServerMessage ();
 
@@ -184,16 +164,14 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 		msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
-		printf ( "Waiting for response...\n" );
-
 		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
 
 		delete ResponseMessage;
 
-		semGive ( ResponseSemaphore );
-		semGive ( ModuleSemaphore );
-
 	}
+
+	semGive ( ResponseSemaphore );
+	semGive ( ModuleSemaphore );
 
 	Com -> SerialTaskUnlock ();
 
@@ -214,7 +192,11 @@ void PICServoController :: PICServoEnable ( uint8_t ModuleNumber )
 	SendMessage -> Command = PICSERVO_ENABLE_MESSAGE;
 	SendMessage -> Data = ModuleNumber;
 
+	printf ( "Sending Enable Message...\n" );
+
 	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
+
+	printf ( "Enable sent...\n" );
 
 };
 
@@ -348,13 +330,13 @@ void PICServoController :: PICServoSetCurrentPosition ( uint8_t ModuleNumber, do
 
 };
 
-double PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
+int32_t PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
 {
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
-	SendMessage -> Command = PICSERVO_RESETPOSITION_MESSAGE;
-	SendMessage -> Data = ModuleNumber;
+	SendMessage -> Command = PICSERVO_READPOSITION_MESSAGE;
+	SendMessage -> Data = static_cast <uint32_t> ( ModuleNumber );
 
 	semTake ( ResponseSemaphore, WAIT_FOREVER );
 
@@ -365,7 +347,15 @@ double PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
 
 	semGive ( ResponseSemaphore );
 
-	double Position = static_cast <double> ( ResponseMessage -> Data );
+	if ( ResponseMessage == NULL )
+	{
+
+		printf ( "Repsonse NULL error...\n" );
+		return 0;
+
+	}
+
+	volatile int32_t Position = static_cast <int32_t> ( ResponseMessage -> Data );
 
 	delete ResponseMessage;
 	return Position;
@@ -462,26 +452,17 @@ void PICServoController :: PICServoSetAnalogInverted ( uint8_t ModuleNumber, boo
 void PICServoController :: RunLoop ()
 {
 
-	semTake ( ModuleSemaphore, WAIT_FOREVER );
-
 	Started = true;
 
 	Com = new PICServoCom ();
-
-	PipeServer = new AnalogCANJaguarPipeServer ();
-	PipeServer -> Start ();
 
 	ServerMessage * Message = NULL;
 	ServerMessage * ResponseMessage = NULL;
 
 	PICServo * Module = NULL;
 
-	semGive ( ModuleSemaphore );
-
 	while ( true )
 	{
-
-		semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 		if ( msgQReceive ( SendMessageQueue, reinterpret_cast <char *> ( & Message ), sizeof ( ServerMessage * ), WAIT_FOREVER ) != ERROR )
 		{
@@ -605,6 +586,7 @@ void PICServoController :: RunLoop ()
 
 				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleLoadTrajectory ( PAVMessage -> Index, static_cast <uint32_t> ( PAVMessage -> Position ), PAVMessage -> Velocity, PAVMessage -> Acceleration, 0, true, true, true, false, true, false, false, true );
+
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
@@ -655,6 +637,7 @@ void PICServoController :: RunLoop ()
 			case PICSERVO_READPOSITION_MESSAGE:
 
 				PICServoCom :: PICServoStatus_t Status;
+
 				Com -> ModuleReadStatus ( Message -> Data, PICSERVO_STATUS_TYPE_POSITION, & Status );
 
 				ResponseMessage = new ServerMessage ();
@@ -730,16 +713,28 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_INIT_MESSAGE:
 
-				semTake ( ModuleSemaphore, WAIT_FOREVER );
-
 				Module = Modules [ Message -> Data ];
 
+				printf ( "Setting up status type...\n" );
+
 				Com -> SetStatusType ( Module -> StatusType );
+				Com -> ModuleDefineStatus ( Message -> Data, Module -> StatusType );
+				Com -> ReceiveStatusPacket ();
+
+				printf ( "Setting Addresss...\n" );
+
 				Com -> ModuleSetAddress ( 0, Message -> Data, GroupAddress );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
-				semGive ( ModuleSemaphore );
+				Com -> ModuleClearStatus ( Message -> Data );
+				Com -> ReceiveStatusPacket ();
+
+				printf ( "Stopping Motor...\n" );
+
+				Com -> ModuleStopMotor ( Message -> Data, false, true, true );
+				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
 				ResponseMessage = new ServerMessage ();
 
@@ -754,16 +749,22 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_REINIT_MESSAGE:
 
-				semTake ( ModuleSemaphore, WAIT_FOREVER );
-
 				Module = Modules [ Message -> Data ];
 
+				printf ( "Setting up status type...\n" );
+
+				Com -> ModuleDefineStatus ( Message -> Data, Module -> StatusType );
 				Com -> SetStatusType ( Module -> StatusType );
+				Com -> ReceiveStatusPacket ();
+
+				Com -> ModuleClearStatus ( Message -> Data );
+				Com -> ReceiveStatusPacket ();
+
+				printf ( "Stopping Motor...\n" );
+
 				Com -> ModuleStopMotor ( Message -> Data, false, true, true );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
-
-				semGive ( ModuleSemaphore );
 
 				ResponseMessage = new ServerMessage ();
 
@@ -777,6 +778,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			default:
+
+				printf ( "Unhandled command!\n" );
 
 				if ( Message != NULL )
 					delete Message;

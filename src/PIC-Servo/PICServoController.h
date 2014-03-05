@@ -7,7 +7,7 @@
 
 #include "WPILib.h"
 
-#define PICSERVO_CONTROL_TASK_PRIORITY 100
+#define PICSERVO_CONTROL_TASK_PRIORITY 50
 #define PICSERVO_CONTROL_TASK_STACKSIZE 0x20000
 
 class PICServoController
@@ -142,7 +142,7 @@ private:
 	void PICServoResetPosition ( uint8_t ModuleNumber );
 	void PICServoSetCurrentPosition ( uint8_t ModuleNumber, double Position );
 
-	double PICServoReadPosition ( uint8_t ModuleNumber );
+	int32_t PICServoReadPosition ( uint8_t ModuleNumber );
 
 	void PICServoSetVelocityA ( uint8_t ModuleNumber, double Velocity, double Acceleration );
 	void PICServoSetVelocity ( uint8_t ModuleNumber, double Velocity );

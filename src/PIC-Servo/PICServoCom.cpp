@@ -5,18 +5,19 @@ PICServoCom :: PICServoCom ()
 
 	Com = new SerialDriver ( 19200 );
 	Com -> SetFlowControl ( SerialDriver :: FlowControl_None );
-	Com -> SetTimeout ( 5.0 );
+	Com -> SetTimeout ( 1.0 );
 	Com -> SetReadBufferSize ( 0x400 );
 	Com -> SetWriteBufferSize ( 0x400 );
 	Com -> Clear ();
 
+	Com -> FlushDeviceRead ();
 	Com -> FlushReadBuffer ();
 
 	SerialLock = semMCreate ( SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE );
 
 	StatusSize = 2;
 	StatusType = 0x00;
-	StatusBytes = new uint8_t [ 20 ];
+	StatusBytes = new uint8_t [ 50 ];
 
 };
 
@@ -439,13 +440,6 @@ void PICServoCom :: ModuleLoadTrajectory ( uint8_t Module, int32_t Position, dou
 
 	}
 
-	printf ( "LOAD TRAJECTORY COMMAND:\n[ aa %x %x ", Module, PICSERVO_COMMAND_LOAD_TRAJ | ( ( Counter << 4 ) & 0xF0 ) );
-
-	for ( int32_t i = 0; i < Counter; i ++ )
-		printf ( " %x", Data [ i ] );
-
-	printf ( " ]\n" );
-
 	SendMessage ( Module, PICSERVO_COMMAND_LOAD_TRAJ | ( ( Counter << 4 ) & 0xF0 ), Data, DataSize );
 
 };
@@ -575,12 +569,13 @@ void PICServoCom :: SerialTaskUnlock ()
 void PICServoCom :: SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Data, uint8_t DataSize )
 {
 
-	uint8_t CheckSum = Address + Command;
 	uint8_t DataBuffer [ 4 + DataSize ];
 
 	DataBuffer [ 0 ] = 0xAA;
 	DataBuffer [ 1 ] = Address;
 	DataBuffer [ 2 ] = Command;
+
+	uint8_t CheckSum = Address + Command;
 
 	for ( uint8_t i = 0; i < DataSize; i ++ )
 	{
@@ -593,6 +588,7 @@ void PICServoCom :: SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Da
 	DataBuffer [ 3 + DataSize ] = CheckSum;
 
 	Com -> Write ( DataBuffer, 4 + DataSize );
+
 	Com -> FlushWriteBuffer ();
 	Com -> FlushDeviceWrite ();
 
@@ -611,6 +607,7 @@ bool PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint32_t Count )
 
 	}
 
+	printf ( "ReceiveMessage FAILED!\n" );
 
 	Com -> FlushReadBuffer ();
 	Com -> FlushDeviceRead ();

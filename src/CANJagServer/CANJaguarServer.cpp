@@ -466,7 +466,7 @@ float CANJaguarServer :: GetJag ( CAN_ID ID )
 	
 	}
 
-	CANJagServerMessage * ReceiveMessage;
+	volatile CANJagServerMessage * ReceiveMessage;
 
 	// Receive message. ( It's imperative that we receive the result due to the preumptive nature of the call. )
 	if ( msgQReceive ( MessageReceiveQueue, reinterpret_cast <char *> ( & ReceiveMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER ) == ERROR )
@@ -548,7 +548,7 @@ float CANJaguarServer :: GetJagPosition ( CAN_ID ID )
 	
 	}
 
-	CANJagServerMessage * ReceiveMessage;
+	volatile CANJagServerMessage * ReceiveMessage;
 
 	// Receive message. ( It's imperative that we receive the result due to the preumptive nature of the call. )
 	if ( msgQReceive ( MessageReceiveQueue, reinterpret_cast <char *> ( & ReceiveMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER ) == ERROR )
@@ -629,7 +629,7 @@ float CANJaguarServer :: GetJagBusVoltage ( CAN_ID ID )
 	
 	}
 
-	CANJagServerMessage * ReceiveMessage;
+	volatile CANJagServerMessage * ReceiveMessage;
 
 	// Receive message. ( It's imperative that we receive the result due to the preumptive nature of the call. )
 	if ( msgQReceive ( MessageReceiveQueue, reinterpret_cast <char *> ( & ReceiveMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER ) == ERROR )
@@ -712,7 +712,7 @@ float CANJaguarServer :: GetJagOutputVoltage ( CAN_ID ID )
 	
 	}
 
-	CANJagServerMessage * ReceiveMessage;
+	volatile CANJagServerMessage * ReceiveMessage;
 
 	// Receive message. ( It's imperative that we receive the result due to the preumptive nature of the call. )
 	if ( msgQReceive ( MessageReceiveQueue, reinterpret_cast <char *> ( & ReceiveMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER ) == ERROR )
@@ -785,7 +785,7 @@ float CANJaguarServer :: GetJagOutputCurrent ( CAN_ID ID )
 	
 	}
 
-	CANJagServerMessage * ReceiveMessage;
+	volatile CANJagServerMessage * ReceiveMessage;
 
 	// Receive message. ( It's imperative that we receive the result due to the preumptive nature of the call. )
 	if ( msgQReceive ( MessageReceiveQueue, reinterpret_cast <char *> ( & ReceiveMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER ) == ERROR )

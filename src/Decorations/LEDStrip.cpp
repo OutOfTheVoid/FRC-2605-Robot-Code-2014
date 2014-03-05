@@ -3,22 +3,34 @@
 LEDStrip :: LEDStrip ( uint32_t ClockPin, uint32_t MOSIPin, uint32_t MISOPin, uint32_t NumLEDS )
 {
 
+	printf ( "LEDStrip: Creating Digitial IO\n" );
+
 	this -> ClockPin = new DigitalOutput ( ClockPin );
 	this -> MOSIPin = new DigitalOutput ( MOSIPin );
 	this -> MISOPin = new DigitalInput ( MISOPin );
+
+	printf ( "LEDStrip: Setting up SPI\n" );
 
 	Com = new SPI ( this -> ClockPin, this -> MOSIPin, this -> MISOPin );
 	Com -> SetBitsPerWord ( 8 );
 	Com -> SetMSBFirst ();
 
+	printf ( "LEDStrip: Calculating buffer stuff\n" );
+
 	StripLength = NumLEDS;
 	LatchBytes = ( StripLength + 31 ) / 32;
 	BufferSize = StripLength * 3 + LatchBytes;
 
+	printf ( "LEDStrip: Writing initial clear message\n" );
+
 	for ( uint32_t i = ( ( StripLength + 31 ) / 32 ) - 1; i > 0; i ++ )
 		Com -> Write ( 0 );
 
+	printf ( "LEDStrip: Creating buffer\n" );
+
 	DataBuffer = new uint8_t [ BufferSize ];
+
+	printf ( "LEDStrip: Clearing buffer\n" );
 
 	memset ( DataBuffer, 0x80, BufferSize );
 	memset ( & DataBuffer [ StripLength * 3 ], 0x00, LatchBytes );

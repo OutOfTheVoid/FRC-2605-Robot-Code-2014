@@ -17,20 +17,17 @@ class ShooterBelts
 {
 public:
 
-	ShooterBelts ( SpeedController * RollerBL, SpeedController * RollerBR, SpeedController * ArmSL, SpeedController * ArmSR );
+	ShooterBelts ( SpeedController * RollerBL, SpeedController * RollerBR);
 	~ShooterBelts ();
 
-	void SetMotors ( SpeedController * BeltBL, SpeedController * BeltBR, SpeedController * ArmSL, SpeedController * ArmRS );
-	void SetInverted ( bool BL, bool BR, bool SL, bool SR );
+	void SetMotors ( SpeedController * BeltBL, SpeedController * BeltBR );
+	void SetInverted ( bool BL, bool BR );
 
-	void SetBeltPreScale ( double Prescale );
-	void SetArmPreScale ( double Prescale );
+	void SetPreScale ( double Prescale );
 
-	void SetBeltMotorScale ( double Scale );
-	void SetArmMotorScale ( double Scale );
+	void SetMotorScale ( double Scale );
 
-	void SetArmPosition ( double Position );
-	void SetBeltSpeed ( double Speed );
+	void SetSpeed ( double Speed );
 
 	void PushSpeeds ();
 
@@ -43,9 +40,9 @@ private:
 
 	bool Enabled;
 
-	double S, A, ScaleR, ScaleA, PrescaleR, PrescaleA;
+	double S, Scale, Prescale;
 
-	BeltMotor RollerL, RollerR, ArmL, ArmR;
+	BeltMotor RollerL, RollerR;
 
 };
 

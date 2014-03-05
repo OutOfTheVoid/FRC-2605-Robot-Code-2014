@@ -3,18 +3,108 @@
 Robot :: Robot ():
 	WheelConfig (),
 	BeltConfig (),
-	ArmConfig (),
 	WenchConfig ()
 {
+
+	printf ( "* 1\n" );
 
 	Mode = RobotStartMode;
 
 	DsLcd = DriverStationLCD :: GetInstance ();
 
-	JagServer = new CANJaguarServer ();
+	printf ( "* 2\n" );
 
+	AutonomousTask = new Task ( "2605_Autonomous", (FUNCPTR) & Robot :: AutonomousTaskStub );
+	TeleopTask = new Task ( "2605_Teleop", (FUNCPTR) & Robot :: TeleopTaskStub );
+	VisionTask = new Task ( "2605_Vision", (FUNCPTR) & Robot :: VisionTaskStub, VISION_PRIORITY );
+
+	TargetingCamera = & AxisCamera :: GetInstance ( "10.26.5.11" );
+
+	printf ( "* 3\n" );
+
+	PICServoControl = new PICServoController ();
+
+	printf ( "* 4\n" );
+
+	InitControls ();
+
+	printf ( "* 5\n" );
+
+	InitMotors ();
+
+	printf ( "* 6\n" );
+
+	PICServoControl -> AddPICServo ( 1, false, 4, 3 );
+
+	printf ( "* 7\n" );
+
+	TestPICServo = PICServoControl -> GetModule ( 1 );
+	TestPICServo -> SetControlMode ( PICServo :: kPosition );
+	TestPICServo -> ConfigVelocity ( 1 );
+	TestPICServo -> ConfigAcceleration ( 1 );
+	//TestPICServo -> SetPID ( 0.5, 0.01, 0.2 );
+	TestPICServo -> SetEncoderResolution ( 360 * 4 );
+
+	//-----------------------------------------------//
+
+	//LEDS = new LEDStrip ( 1, 2, 3, 10 );
+
+	//TestAnimation = BuildTestAnimation ( LEDS );
+
+	printf ( "* 8\n" );
+
+};
+
+void Robot :: InitControls ()
+{
+
+	printf ( "* A\n" );
+
+	StrafeStick = new Joystick ( 1 );
+	RotateStick = new Joystick ( 2 );
+	ShootStick = new Joystick ( 3 );
+
+	printf ( "* B\n" );
+
+	DriveFilter = new ExponentialFilter ( DRIVE_RESPONSE_CURVE );
+	StickFilter = new DeadbandFilter ( range_t ( -0.08, 0.08 ) );
+
+	printf ( "* C\n" );
+
+	OnShiftDelegate = new ClassDelegate <Robot, void> ( this, & Robot :: OnShift );
+
+	printf ( "* D\n" );
+
+	GearStepper = new NumericStepper ( StrafeStick, 3, 4 );
+
+	printf ( "* E\n" );
+
+	GearStepper -> SetRange ( 1, 3 );
+
+	printf ( "* F\n" );
+
+	GearStepper -> SetChangeListener ( OnShiftDelegate );
+
+	printf ( "* G\n" );
+
+	GearStepper -> Set ( 1 );
+
+	printf ( "* H\n" );
+
+	OnShift ();
+
+};
+
+void Robot :: InitMotors ()
+{
+
+	// CANJaguar Server
+
+	JagServer = new CANJaguarServer ();
 	JagServer -> Start ();
-	
+
+	// DRIVE
+
 	WheelConfig.Mode = CANJaguar :: kSpeed;
 	WheelConfig.P = P_GEAR1;
 	WheelConfig.I = I_GEAR1;
@@ -31,34 +121,12 @@ Robot :: Robot ():
 	Drive = new MecanumDrive ( WheelFL, WheelFR, WheelRL, WheelRR );
 
 	Drive -> SetMotorScale ( SPEED_SCALE_GEAR1 );
-
 	Drive -> SetPreScale ( 1, 1 );
 	Drive -> SetInverted ( false, true, false, true );
 	Drive -> SetSineInversion ( false );
 	Drive -> Disable ();
 
-	RotationGyro = new Gyro ( 1 );
-	RotationGyro -> SetSensitivity ( 0.007 );
-	RotationGyro -> SetPIDSourceParameter ( PIDSource :: kRate );
-
-	RotationValue = new PIDOutputSensor ();
-	RotationController = new PIDController ( ROTATION_P, ROTATION_I, ROTATION_D, ROTATION_F, RotationGyro, RotationValue );
-
-	StrafeStick = new Joystick ( 1 );
-	RotateStick = new Joystick ( 2 );
-	ShootStick = new Joystick ( 3 );
-
-	DriveFilter = new ExponentialFilter ( DRIVE_RESPONSE_CURVE );
-	StickFilter = new DeadbandFilter ( range_t ( -0.08, 0.08 ) );
-
-	AutonomousTask = new Task ( "2605_Autonomous", (FUNCPTR) & Robot :: AutonomousTaskStub );
-	TeleopTask = new Task ( "2605_Teleop", (FUNCPTR) & Robot :: TeleopTaskStub );
-	VisionTask = new Task ( "2605_Vision", (FUNCPTR) & Robot :: VisionTaskStub, VISION_PRIORITY );
-
-	TargetingCamera = & AxisCamera :: GetInstance ( "10.26.5.11" );
-
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "GEAR 1\n" );
-	DsLcd -> UpdateLCD ();
+	// BELTS
 
 	BeltConfig.Mode = CANJaguar :: kSpeed;
 	BeltConfig.P = BELT_P;
@@ -72,52 +140,20 @@ Robot :: Robot ():
 	BeltL = new AsynchCANJaguar ( JagServer, 8, BeltConfig );
 	BeltR = new AsynchCANJaguar ( JagServer, 6, BeltConfig );
 
-	ArmConfig.Mode = CANJaguar :: kPosition;
-	ArmConfig.P = ARM_P;
-	ArmConfig.I = ARM_I;
-	ArmConfig.D = ARM_D;
-	ArmConfig.EncoderLinesPerRev = ARM_ENCODER_CODES_PER_REVOLUTION;
-	ArmConfig.PosRef = CANJaguar :: kPosRef_QuadEncoder;
-	ArmConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
-	ArmConfig.LowPosLimit = - 0.2;
-	ArmConfig.HighPosLimit = 0.2;
+	Shooter = new ShooterBelts ( BeltL, BeltR );
 
-	/*ArmL = new AsynchCANJaguar ( JagServer, 3, ArmConfig );
-	ArmR = new AsynchCANJaguar ( JagServer, 4, ArmConfig );
+	Shooter -> SetMotorScale ( BELT_SPEED_SCALE );
+	Shooter -> SetInverted ( false, true );
 
-	IntendedArmPosition = 0.0;
+	// WENCH
 
-	Shooter = new ShooterBelts ( BeltL, BeltR, ArmL, ArmR );
-
-	Shooter -> SetInverted ( false, true, true, false );
-
-	Shooter -> SetBeltMotorScale (  BELT_SPEED_SCALE );
-	Shooter -> SetArmMotorScale ( ARM_SPEED_SCALE );
+	printf ( "* ^\n" );
 
 	WenchM = new AsynchCANJaguar ( JagServer, 9, WenchConfig );
 
+	printf ( "* &\n" );
+
 	Wench = new ShooterWench ( WenchM );
-	Wench -> SetMotorScale ( WENCH_SPEED_SCALE );*/
-
-	PICServoControl = new PICServoController ();
-
-	printf ( "ADDING PIC SERVO...\n" );
-
-	PICServoControl -> AddPICServo ( 2, false, 3, 3 );
-
-	printf ( "ADDED!\n" );
-
-	TestPICServo = PICServoControl -> GetModule ( 2 );
-	TestPICServo -> SetControlMode ( PICServo :: kPWM );
-	TestPICServo -> ConfigVelocity ( 1 );
-	TestPICServo -> ConfigAcceleration ( 1 );
-	TestPICServo -> SetPID ( 0.5, 0.01, 0.2 );
-
-	//-----------------------------------------------//
-
-	LEDS = new LEDStrip ( 0, 1, 2, 10 );
-
-	TestAnimation = BuildTestAnimation ( LEDS );
 
 };
 
@@ -131,6 +167,20 @@ Robot :: ~Robot ()
 //============================================================//
 /*========================[DRIVE STUFF]=======================*/
 //============================================================//
+
+void Robot :: OnShift ()
+{
+
+	printf ( "* >\n" );
+
+	ShiftVGear ( GearStepper -> Get () );
+
+	printf ( "* <\n" );
+
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "GEAR %i", GearStepper -> Get () );
+	DsLcd -> UpdateLCD ();
+
+};
 
 void Robot :: ShiftVGear ( uint8_t Gear )
 {
@@ -231,25 +281,25 @@ void Robot :: AutonomousInit ()
 	VisionTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 	AutonomousTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
-	LEDS -> Clear ();
+	//LEDS -> Clear ();
 
 };
 
 void Robot :: AutonomousPeriodic ()
 {
 
-	TestAnimation -> Update ();
+	/*TestAnimation -> Update ();
 
 	if ( LEDS -> HasNewData () )
-		LEDS -> PushColors ();
+		LEDS -> PushColors ();*/
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	LEDS -> Clear ();
-	LEDS -> PushColors ();
+	/*LEDS -> Clear ();
+	LEDS -> PushColors ();*/
 
 	AutonomousTask -> Stop ();
 	VisionTask -> Stop ();
@@ -272,30 +322,37 @@ void Robot :: AutonomousTaskRoutine ()
 void Robot :: TeleopInit ()
 {
 
-	printf ( "[1]\n" );
+	printf ( "================\n=   Teleop !    =\n================\n" );
 
 	DisabledEnd ();
+
+	printf ( "A" );
+
 	Mode = TeleopMode;
 
-	GearUpPreState = false;
-	GearDownPreState = false;
-
-	Gear = 1;
-	ShiftVGear ( Gear );
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "GEAR %i", Gear );
-
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
-	DsLcd -> UpdateLCD ();
 
+	printf ( "B" );
+	
+	GearStepper -> Set ( 1 );
+
+	printf ( "C" );
+
+	OnShift ();
+
+	printf ( "C" );
+	
 	Drive -> Enable ();
+
+	printf ( "E" );
+
 	Shooter -> Enable ();
+
+	printf ( "F" );
+
 	Wench -> Enable ();
 
-	ArmL -> Enable ( 0 );
-	ArmR -> Enable ( 0 );
-
-	RotationController -> Reset ();
-	RotationController -> Enable ();
+	printf ( "G" );
 
 	TeleopTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
@@ -304,51 +361,7 @@ void Robot :: TeleopInit ()
 void Robot :: TeleopPeriodic ()
 {
 
-	if ( GearDownPreState && ! StrafeStick -> GetRawButton ( 4 ) )
-		GearDownPreState = false;
-
-	if ( GearUpPreState && ! StrafeStick -> GetRawButton ( 5 ) )
-		GearUpPreState = false;
-
-	if ( ! GearDownPreState && StrafeStick -> GetRawButton ( 4 ) )
-	{
-
-		if ( Gear > 1 )
-		{
-
-			Gear --;
-			ShiftVGear ( Gear );
-
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "GEAR %i", Gear );
-			DsLcd -> UpdateLCD ();
-
-			Wait ( 0.05 );
-
-		}
-
-		GearDownPreState = true;
-		
-	}
-
-	if ( ! GearUpPreState && StrafeStick -> GetRawButton ( 5 ) )
-	{
-
-		if ( Gear < 3 )
-		{
-
-			Gear ++;
-			ShiftVGear ( Gear );
-
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "GEAR %i", Gear );
-			DsLcd -> UpdateLCD ();
-
-			Wait ( 0.05 );
-
-		}
-
-		GearUpPreState = true;
-
-	}
+	GearStepper -> Update ();
 
 	double TX = StickFilter -> Compute ( - StrafeStick -> GetX () );
 	double TY = StickFilter -> Compute ( StrafeStick -> GetY () );
@@ -370,9 +383,6 @@ void Robot :: TeleopPeriodic ()
 	TR *= ( TR_X >= 0 ) ? -1 : 1;
 	TR = StickFilter -> Compute ( TR );
 
-	RotationController -> SetSetpoint ( TR * GearRPM * 1.5 );
-
-	//Drive -> SetRotation ( - RotationValue -> GetOutput () );
 	Drive -> SetRotation ( TR );
 
 	Drive -> PushTransform ();
@@ -380,50 +390,15 @@ void Robot :: TeleopPeriodic ()
 	if ( ShootStick -> GetRawButton ( 1 ) )
 	{
 
-		Shooter -> SetBeltSpeed ( 1.0 );
+		Shooter -> SetSpeed ( 1.0 );
 
 	}
 	else if ( ShootStick -> GetRawButton ( 3 ) )
-		Shooter -> SetBeltSpeed ( 0.17 );
+		Shooter -> SetSpeed ( 0.17 );
 	else if ( ShootStick -> GetRawButton ( 2 ) )
-		Shooter -> SetBeltSpeed ( - 0.17 );
+		Shooter -> SetSpeed ( - 0.17 );
 	else
-		Shooter -> SetBeltSpeed ( 0 );
-
-	if ( ShootStick -> GetRawButton ( 6 ) )
-	{
-		
-		//Shooter -> SetArmPosition ( 2 );
-		/*IntendedArmPosition += 0.01;
-
-		DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Arm Position: %f", IntendedArmPosition );
-		DsLcd -> UpdateLCD ();*/
-
-	}
-
-	else if ( ShootStick -> GetRawButton ( 7 ) )
-	{
-
-		//Shooter -> SetArmPosition ( - 2 );
-
-		/*IntendedArmPosition -= 0.01;
-		
-		DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Arm Position: %f", IntendedArmPosition );
-		DsLcd -> UpdateLCD ();*/
-
-	}
-	else
-		Shooter -> SetArmPosition ( 0 );
-
-	if ( IntendedArmPosition >= 0.2 )
-		IntendedArmPosition = 0.2;
-
-	if ( IntendedArmPosition <= -0.2 )
-		IntendedArmPosition = -0.2;
-
-	//Shooter -> SetArmPosition ( IntendedArmPosition );
-
-	printf("ARM POSITION: LEFT: %f, RIGHT: %f\n", ArmL -> GetPosition (), ArmR -> GetPosition () );
+		Shooter -> SetSpeed ( 0 );
 
 	Shooter -> PushSpeeds ();
 
@@ -445,10 +420,6 @@ void Robot :: TeleopEnd ()
 	DsLcd -> UpdateLCD ();
 
 	TeleopTask -> Stop ();
-
-	RotationController -> Disable ();
-
-	IntendedArmPosition = 0;
 
 	Drive -> Disable ();
 	Shooter -> Disable ();
@@ -480,22 +451,24 @@ void Robot :: TestInit ()
 	DisabledEnd ();
 	Mode = TestMode;
 
-	printf ( "================\n=    Test !    =\n================\n" );
+	
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
+
+	TestPICServo -> ResetPosition ();
+
+	TestPICServo -> Enable ();
 
 };
 
 void Robot :: TestPeriodic ()
 {
 
-	PICServoCom :: PICServoStatus_t Status;
-
 	if ( StrafeStick -> GetRawButton ( 6 ) )
 	{
 		
-		TestPICServo -> Set ( 120 );
+		TestPICServo -> Set ( 0.25 );
 
 	}
 	else
@@ -505,12 +478,14 @@ void Robot :: TestPeriodic ()
 
 	}
 
-	printf ( "Position: %i\n", TestPICServo -> GetPosition () );
+	printf ( "Position: %f\n", TestPICServo -> GetPosition () );
 
 };
 
 void Robot :: TestEnd ()
 {
+
+	TestPICServo -> Disable ();
 
 	printf ( "================\n=    Test X    =\n================\n" );
 
@@ -563,7 +538,7 @@ void Robot :: DisabledInit ()
 void Robot :: DisabledPeriodic ()
 {
 
-	RotationGyro -> Reset ();
+
 
 };
 

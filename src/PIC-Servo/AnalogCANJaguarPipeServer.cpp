@@ -116,7 +116,7 @@ void AnalogCANJaguarPipeServer :: Stop ()
 	while ( DeQueueSuccessful )
 	{
 
-		ServerMessage * Message = NULL;
+		volatile ServerMessage * Message = NULL;
 
 		DeQueueSuccessful = ( msgQReceive ( SendMessageQueue, reinterpret_cast <char *> ( & Message ), sizeof ( ServerMessage * ), 0 ) != ERROR );
 
@@ -203,7 +203,7 @@ AnalogCANJaguarPipe_t AnalogCANJaguarPipeServer :: AddPipe ( CAN_ID JaguarID, ui
 
 	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
-	ServerMessage * ResponseMessage = NULL;
+	volatile ServerMessage * ResponseMessage = NULL;
 	msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
 
 	semGive ( ResponseSemaphore );
@@ -352,7 +352,7 @@ void AnalogCANJaguarPipeServer :: RunLoop ()
 
 					NewPipe.Jaguar = new CANJaguar ( static_cast <uint8_t> ( NewPipe.JaguarID ), JAGCONTROLMODE );
 					NewPipe.Jaguar -> DisableControl ();
-
+					
 					NewPipe.InputChannel = new AnalogChannel ( NewPipe.Module, NewPipe.Channel );
 
 					NewPipe.Offset = 2.5;
@@ -479,7 +479,6 @@ void AnalogCANJaguarPipeServer :: RunLoop ()
 
 			if ( ( * Pipes ) [ i ].Enabled )
 				( * Pipes ) [ i ].Jaguar -> Set ( out );
-
 
 		}
 	}

@@ -24,6 +24,8 @@ public:
 
 	void Update ();
 
+	void SetChangeListener ( Delegate <void> * Listener );
+
 private:
 
 	Delegate <void> * OnChange;

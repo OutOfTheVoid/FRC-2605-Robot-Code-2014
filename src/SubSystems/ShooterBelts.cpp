@@ -1,6 +1,6 @@
 #include "ShooterBelts.h"
 
-ShooterBelts :: ShooterBelts ( SpeedController * RollerBL, SpeedController * RollerBR, SpeedController * ArmSL, SpeedController * ArmSR )
+ShooterBelts :: ShooterBelts ( SpeedController * RollerBL, SpeedController * RollerBR )
 {
 
 	RollerL.Motor = RollerBL;
@@ -8,16 +8,9 @@ ShooterBelts :: ShooterBelts ( SpeedController * RollerBL, SpeedController * Rol
 	RollerL.Inverted = false;
 	RollerR.Inverted = false;
 
-	ArmL.Motor = ArmSL;
-	ArmR.Motor = ArmSR;
-	ArmL.Inverted = false;
-	ArmR.Inverted = false;
+	Scale = 1;
 
-	ScaleR = 1;
-	ScaleA = 1;
-
-	PrescaleR = 1;
-	PrescaleA = 1;
+	Prescale = 1;
 
 	Enabled = false;
 
@@ -30,7 +23,7 @@ ShooterBelts :: ~ShooterBelts ()
 
 };
 
-void ShooterBelts :: SetMotors ( SpeedController * RollerBL, SpeedController * RollerBR, SpeedController * ArmSL, SpeedController * ArmSR )
+void ShooterBelts :: SetMotors ( SpeedController * RollerBL, SpeedController * RollerBR )
 {
 
 	if ( Enabled )
@@ -41,14 +34,9 @@ void ShooterBelts :: SetMotors ( SpeedController * RollerBL, SpeedController * R
 	RollerL.Inverted = false;
 	RollerR.Inverted = false;
 
-	ArmL.Motor = ArmSL;
-	ArmR.Motor = ArmSR;
-	ArmL.Inverted = false;
-	ArmR.Inverted = false;
-
 };
 
-void ShooterBelts :: SetInverted ( bool BL, bool BR, bool SL, bool SR )
+void ShooterBelts :: SetInverted ( bool BL, bool BR )
 {
 
 	if ( Enabled )
@@ -56,67 +44,40 @@ void ShooterBelts :: SetInverted ( bool BL, bool BR, bool SL, bool SR )
 
 	RollerL.Inverted = BL;
 	RollerR.Inverted = BR;
-	ArmL.Inverted = SL;
-	ArmR.Inverted = SR;
 
 };
 
-void ShooterBelts :: SetBeltPreScale ( double Prescale )
+void ShooterBelts :: SetPreScale ( double Prescale )
 {
 
-	PrescaleR = Prescale;
+	this -> Prescale = Prescale;
 
 };
 
-void ShooterBelts :: SetArmPreScale ( double Prescale )
+void ShooterBelts :: SetMotorScale ( double Scale )
 {
 
-	PrescaleA = Prescale;
+	this ->  Scale = Scale;
 
 };
 
-void ShooterBelts :: SetBeltMotorScale ( double Scale )
-{
-
-	ScaleR = Scale;
-
-};
-
-void ShooterBelts :: SetArmMotorScale ( double Scale )
-{
-
-	ScaleA = Scale;
-
-};
-
-void ShooterBelts :: SetArmPosition ( double Position )
+void ShooterBelts :: SetSpeed ( double Speed )
 {
 
 	if ( ! Enabled )
 		return;
 
-	A = Position * PrescaleA;
-
-};
-
-void ShooterBelts :: SetBeltSpeed ( double Speed )
-{
-
-	if ( ! Enabled )
-		return;
-
-	S = Speed * PrescaleR;
+	S = Speed * Prescale;
 
 };
 
 bool ShooterBelts :: Enable ()
 {
 
-	if ( RollerL.Motor == NULL || RollerR.Motor == NULL || ArmL.Motor == NULL || ArmR.Motor == NULL )
+	if ( RollerL.Motor == NULL || RollerR.Motor == NULL )
 		return false;
 
 	S = 0;
-	A = 0;
 
 	Enabled = true;
 
@@ -133,18 +94,12 @@ void ShooterBelts :: PushSpeeds ()
 		RollerL.Motor -> Set ( 0 );
 		RollerR.Motor -> Set ( 0 );
 
-		ArmL.Motor -> Set ( 0 );
-		ArmR.Motor -> Set ( 0 );
-
 		return;
 
 	}
 
-	RollerL.Motor -> Set ( ( RollerL.Inverted ? S : - S ) * ScaleR );
-	RollerR.Motor -> Set ( ( RollerR.Inverted ? S : - S ) * ScaleR );
-
-	ArmL.Motor -> Set ( ( ArmL.Inverted ? A : - A ) * ScaleA );
-	ArmR.Motor -> Set ( ( ArmR.Inverted ? A : - A ) * ScaleA );
+	RollerL.Motor -> Set ( ( RollerL.Inverted ? S : - S ) * Scale );
+	RollerR.Motor -> Set ( ( RollerR.Inverted ? S : - S ) * Scale );
 
 };
 
