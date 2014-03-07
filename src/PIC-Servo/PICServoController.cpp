@@ -102,6 +102,9 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, CAN_ID JaguarID, uint8_t AnalogChannel, uint8_t AnalogModule )
 {
 
+	if ( ! Started )
+		return;
+
 	PICServo * Module;
 
 	ServerMessage * ResponseMessage = NULL;
@@ -187,6 +190,9 @@ PICServo * PICServoController :: GetModule ( uint8_t Module )
 void PICServoController :: PICServoEnable ( uint8_t ModuleNumber )
 {
 
+	if ( ! Started )
+		return;
+
 	ServerMessage * SendMessage = new ServerMessage ();
 
 	SendMessage -> Command = PICSERVO_ENABLE_MESSAGE;
@@ -203,6 +209,9 @@ void PICServoController :: PICServoEnable ( uint8_t ModuleNumber )
 void PICServoController :: PICServoDisable ( uint8_t ModuleNumber )
 {
 
+	if ( ! Started )
+		return;
+
 	ServerMessage * SendMessage = new ServerMessage ();
 
 	SendMessage -> Command = PICSERVO_DISABLE_MESSAGE;
@@ -214,6 +223,9 @@ void PICServoController :: PICServoDisable ( uint8_t ModuleNumber )
 
 void PICServoController :: PICServoSetPWM ( uint8_t ModuleNumber, int16_t PWM )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -232,6 +244,9 @@ void PICServoController :: PICServoSetPWM ( uint8_t ModuleNumber, int16_t PWM )
 void PICServoController :: PICServoSetPosition ( uint8_t ModuleNumber, double Position )
 {
 
+	if ( ! Started )
+		return;
+
 	ServerMessage * SendMessage = new ServerMessage ();
 
 	SetPositionMessage * PMessage = new SetPositionMessage ();
@@ -248,6 +263,9 @@ void PICServoController :: PICServoSetPosition ( uint8_t ModuleNumber, double Po
 
 void PICServoController :: PICServoSetPositionV ( uint8_t ModuleNumber, double Position, double Velocity )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -267,6 +285,9 @@ void PICServoController :: PICServoSetPositionV ( uint8_t ModuleNumber, double P
 void PICServoController :: PICServoSetPositionA ( uint8_t ModuleNumber, double Position, double Acceleration )
 {
 
+	if ( ! Started )
+		return;
+
 	ServerMessage * SendMessage = new ServerMessage ();
 
 	SetPositionAMessage * PAMessage = new SetPositionAMessage ();
@@ -284,6 +305,9 @@ void PICServoController :: PICServoSetPositionA ( uint8_t ModuleNumber, double P
 
 void PICServoController :: PICServoSetPositionVA ( uint8_t ModuleNumber, double Position, double Velocity, double Acceleration )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -304,6 +328,9 @@ void PICServoController :: PICServoSetPositionVA ( uint8_t ModuleNumber, double 
 void PICServoController :: PICServoResetPosition ( uint8_t ModuleNumber )
 {
 
+	if ( ! Started )
+		return;
+
 	ServerMessage * SendMessage = new ServerMessage ();
 
 	SendMessage -> Command = PICSERVO_RESETPOSITION_MESSAGE;
@@ -315,6 +342,9 @@ void PICServoController :: PICServoResetPosition ( uint8_t ModuleNumber )
 
 void PICServoController :: PICServoSetCurrentPosition ( uint8_t ModuleNumber, double Position )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -332,6 +362,9 @@ void PICServoController :: PICServoSetCurrentPosition ( uint8_t ModuleNumber, do
 
 int32_t PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
 {
+
+	if ( ! Started )
+		return 0;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -362,8 +395,11 @@ int32_t PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
 
 };
 
-void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D )
+void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -373,6 +409,7 @@ void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, doub
 	SPIDMessage -> P = P;
 	SPIDMessage -> I = I;
 	SPIDMessage -> D = D;
+	SPIDMessage -> MaxOutput = MaxOutput;
 
 	SendMessage -> Command = PICSERVO_SETPID_MESSAGE;
 	SendMessage -> Data = reinterpret_cast <uint32_t> ( SPIDMessage );
@@ -383,6 +420,9 @@ void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, doub
 
 void PICServoController :: PICServoSetVelocity ( uint8_t ModuleNumber, double Velocity )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -399,6 +439,9 @@ void PICServoController :: PICServoSetVelocity ( uint8_t ModuleNumber, double Ve
 
 void PICServoController :: PICServoSetVelocityA ( uint8_t ModuleNumber, double Velocity, double Acceleration )
 {
+
+	if ( ! Started )
+		return;
 
 	ServerMessage * SendMessage = new ServerMessage ();
 
@@ -446,6 +489,82 @@ void PICServoController :: PICServoSetAnalogInverted ( uint8_t ModuleNumber, boo
 		PipeServer -> SetPipeInverted ( Module -> MotorPipe, Inverted );
 
 	semGive ( ModuleSemaphore );
+
+};
+
+bool PICServoController :: PICServoGetLimit1 ( uint8_t ModuleNumber )
+{
+
+	if ( ! Started )
+		return false;
+
+	ServerMessage * SendMessage = new ServerMessage ();
+
+	SendMessage -> Command = PICSERVO_GETLIMIT_MESSAGE;
+	SendMessage -> Data = ModuleNumber;
+
+	semTake ( ResponseSemaphore, WAIT_FOREVER );
+
+	printf ( "MSGSEND\n" );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+	ServerMessage * ResponseMessage = NULL;
+	msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+	printf ( "MSGRECV\n" );
+
+	semGive ( ResponseSemaphore );
+
+	if ( ResponseMessage == NULL )
+	{
+
+		printf ( "Repsonse NULL error...\n" );
+		return false;
+
+	}
+
+	bool Switch = ( ResponseMessage -> Data & 0x01 ) != 0;
+
+	delete ResponseMessage;
+
+	return Switch;
+
+};
+
+bool PICServoController :: PICServoGetLimit2 ( uint8_t ModuleNumber )
+{
+
+	if ( ! Started )
+		return false;
+
+	ServerMessage * SendMessage = new ServerMessage ();
+
+	SendMessage -> Command = PICSERVO_GETLIMIT_MESSAGE;
+	SendMessage -> Data = ModuleNumber;
+
+	semTake ( ResponseSemaphore, WAIT_FOREVER );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+	ServerMessage * ResponseMessage = NULL;
+	msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+	semGive ( ResponseSemaphore );
+
+	if ( ResponseMessage == NULL )
+	{
+
+		printf ( "Repsonse NULL error...\n" );
+		return false;
+
+	}
+
+	bool Switch = ( ResponseMessage -> Data & 0x02 ) != 0;
+
+	delete ResponseMessage;
+
+	return Switch;
 
 };
 
@@ -700,7 +819,7 @@ void PICServoController :: RunLoop ()
 				Module = Modules [ SPIDMessage -> Index ];
 
 				Com -> SetStatusType ( Module -> StatusType );
-				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ) );
+				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ), 32767, static_cast <uint8_t> ( SPIDMessage -> MaxOutput * 0xFF ) );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
@@ -736,6 +855,12 @@ void PICServoController :: RunLoop ()
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
+				printf ( "Enabling Limit Switches..." );
+
+				Com -> ModuleIOControl ( Message -> Data, true, false );
+				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
+
 				ResponseMessage = new ServerMessage ();
 
 				ResponseMessage -> Command = PICSERVO_INIT_MESSAGE;
@@ -766,10 +891,36 @@ void PICServoController :: RunLoop ()
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
+				printf ( "Enabling Limit Switches..." );
+
+				Com -> ModuleIOControl ( Message -> Data, true, false );
+				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
+
 				ResponseMessage = new ServerMessage ();
 
 				ResponseMessage -> Command = PICSERVO_REINIT_MESSAGE;
 				ResponseMessage -> Data = 0;
+
+				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+				delete Message;
+
+				break;
+
+			case PICSERVO_GETLIMIT_MESSAGE:
+
+				Module = Modules [ Message -> Data ];
+
+				Com -> SetStatusType ( Module -> StatusType );
+				Com -> ModuleGetStatus ( Message -> Data );
+				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
+
+				ResponseMessage = new ServerMessage ();
+
+				ResponseMessage -> Command = PICSERVO_GETLIMIT_MESSAGE;
+				ResponseMessage -> Data = ( ( Module -> LastStatus.StandardFlags & 0x20 ) ? 0x01 : 0x00 ) | ( ( Module -> LastStatus.StandardFlags & 0x40 ) ? 0x02 : 0x00 );
 
 				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 

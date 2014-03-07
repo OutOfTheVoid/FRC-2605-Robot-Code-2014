@@ -6,13 +6,9 @@ Robot :: Robot ():
 	WenchConfig ()
 {
 
-	printf ( "* 1\n" );
-
 	Mode = RobotStartMode;
 
 	DsLcd = DriverStationLCD :: GetInstance ();
-
-	printf ( "* 2\n" );
 
 	AutonomousTask = new Task ( "2605_Autonomous", (FUNCPTR) & Robot :: AutonomousTaskStub );
 	TeleopTask = new Task ( "2605_Teleop", (FUNCPTR) & Robot :: TeleopTaskStub );
@@ -20,30 +16,9 @@ Robot :: Robot ():
 
 	TargetingCamera = & AxisCamera :: GetInstance ( "10.26.5.11" );
 
-	printf ( "* 3\n" );
-
-	PICServoControl = new PICServoController ();
-
-	printf ( "* 4\n" );
-
-	InitControls ();
-
-	printf ( "* 5\n" );
-
 	InitMotors ();
-
-	printf ( "* 6\n" );
-
-	PICServoControl -> AddPICServo ( 1, false, 4, 3 );
-
-	printf ( "* 7\n" );
-
-	TestPICServo = PICServoControl -> GetModule ( 1 );
-	TestPICServo -> SetControlMode ( PICServo :: kPosition );
-	TestPICServo -> ConfigVelocity ( 1 );
-	TestPICServo -> ConfigAcceleration ( 1 );
-	//TestPICServo -> SetPID ( 0.5, 0.01, 0.2 );
-	TestPICServo -> SetEncoderResolution ( 360 * 4 );
+	InitControls ();
+	InitBehaviors ();
 
 	//-----------------------------------------------//
 
@@ -51,45 +26,23 @@ Robot :: Robot ():
 
 	//TestAnimation = BuildTestAnimation ( LEDS );
 
-	printf ( "* 8\n" );
-
 };
 
 void Robot :: InitControls ()
 {
 
-	printf ( "* A\n" );
+	printf ( "INIT CONTROLS\n" );
 
 	StrafeStick = new Joystick ( 1 );
 	RotateStick = new Joystick ( 2 );
 	ShootStick = new Joystick ( 3 );
 
-	printf ( "* B\n" );
-
-	DriveFilter = new ExponentialFilter ( DRIVE_RESPONSE_CURVE );
-	StickFilter = new DeadbandFilter ( range_t ( -0.08, 0.08 ) );
-
-	printf ( "* C\n" );
-
 	OnShiftDelegate = new ClassDelegate <Robot, void> ( this, & Robot :: OnShift );
 
-	printf ( "* D\n" );
-
-	GearStepper = new NumericStepper ( StrafeStick, 3, 4 );
-
-	printf ( "* E\n" );
-
+	GearStepper = new NumericStepper ( StrafeStick, 5, 4 );
 	GearStepper -> SetRange ( 1, 3 );
-
-	printf ( "* F\n" );
-
 	GearStepper -> SetChangeListener ( OnShiftDelegate );
-
-	printf ( "* G\n" );
-
 	GearStepper -> Set ( 1 );
-
-	printf ( "* H\n" );
 
 	OnShift ();
 
@@ -98,6 +51,12 @@ void Robot :: InitControls ()
 void Robot :: InitMotors ()
 {
 
+	printf ( "INIT MOTORS\n" );
+
+	// PICServo Controller
+
+	PICServoControl = new PICServoController ();
+
 	// CANJaguar Server
 
 	JagServer = new CANJaguarServer ();
@@ -105,13 +64,15 @@ void Robot :: InitMotors ()
 
 	// DRIVE
 
+	//WheelConfig.Mode = CANJaguar :: kVoltage;
 	WheelConfig.Mode = CANJaguar :: kSpeed;
 	WheelConfig.P = P_GEAR1;
 	WheelConfig.I = I_GEAR1;
 	WheelConfig.D = D_GEAR1;
 	WheelConfig.EncoderLinesPerRev = ENCODER_CODES_PER_REVOLUTION;
 	WheelConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
-	WheelConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	WheelConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
+	WheelConfig.FaultTime = 0.51;
 
 	WheelFL = new AsynchCANJaguar ( JagServer, 7, WheelConfig );
 	WheelFR = new AsynchCANJaguar ( JagServer, 1, WheelConfig );
@@ -130,12 +91,13 @@ void Robot :: InitMotors ()
 
 	BeltConfig.Mode = CANJaguar :: kSpeed;
 	BeltConfig.P = BELT_P;
-	BeltConfig.P = BELT_P;
-	BeltConfig.P = BELT_P;
+	BeltConfig.I = BELT_I;
+	BeltConfig.D = BELT_D;
 	BeltConfig.EncoderLinesPerRev = BELT_ENCODER_CODES_PER_REVOLUTION;
 	BeltConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
-	BeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	BeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
 	BeltConfig.MaxVoltage = 14;
+	BeltConfig.FaultTime = 0.51;
 
 	BeltL = new AsynchCANJaguar ( JagServer, 8, BeltConfig );
 	BeltR = new AsynchCANJaguar ( JagServer, 6, BeltConfig );
@@ -147,13 +109,51 @@ void Robot :: InitMotors ()
 
 	// WENCH
 
-	printf ( "* ^\n" );
-
 	WenchM = new AsynchCANJaguar ( JagServer, 9, WenchConfig );
 
-	printf ( "* &\n" );
-
 	Wench = new ShooterWench ( WenchM );
+
+	// ARMS
+
+	printf ( "PICSERVO\n" );
+
+	PICServoControl -> AddPICServo ( 1, false, 4, 3 );
+	PICServoControl -> AddPICServo ( 2, false, 3, 4 );
+
+	ArmL = PICServoControl -> GetModule ( 1 );
+
+	ArmL -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
+	ArmL -> SetEncoderResolution ( 360 * 4 );
+	ArmL -> ConfigVelocity ( 0.4 );
+	ArmL -> ConfigAcceleration ( 0.02 );
+
+	ArmR = PICServoControl -> GetModule ( 2 );
+
+	ArmR -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
+	ArmR -> SetEncoderResolution ( 360 * 4 );
+	ArmR -> ConfigVelocity ( 0.4 );
+	ArmR -> ConfigAcceleration ( 0.02 );
+
+	printf ( "COLLECTORARMS\n" );
+
+	Arms = new CollectorArms ( ArmL, ArmR );
+
+	Arms -> SetInverted ( false, true );
+	Arms -> SetFreeDrivePower ( 0.3 );
+
+};
+
+void Robot :: InitBehaviors ()
+{
+
+	printf ( "INIT BEHAVIORS\n" );
+
+	Behaviors = new BehaviorController ();
+
+	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
+	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms );
+
+	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 
 };
 
@@ -171,11 +171,7 @@ Robot :: ~Robot ()
 void Robot :: OnShift ()
 {
 
-	printf ( "* >\n" );
-
 	ShiftVGear ( GearStepper -> Get () );
-
-	printf ( "* <\n" );
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "GEAR %i", GearStepper -> Get () );
 	DsLcd -> UpdateLCD ();
@@ -283,6 +279,9 @@ void Robot :: AutonomousInit ()
 
 	//LEDS -> Clear ();
 
+	ArmL -> SetControlMode ( PICServo :: kPWM );
+	ArmL -> Enable ();
+
 };
 
 void Robot :: AutonomousPeriodic ()
@@ -300,6 +299,8 @@ void Robot :: AutonomousEnd ()
 
 	/*LEDS -> Clear ();
 	LEDS -> PushColors ();*/
+
+	ArmL -> Disable ();
 
 	AutonomousTask -> Stop ();
 	VisionTask -> Stop ();
@@ -325,34 +326,15 @@ void Robot :: TeleopInit ()
 	printf ( "================\n=   Teleop !    =\n================\n" );
 
 	DisabledEnd ();
-
-	printf ( "A" );
-
 	Mode = TeleopMode;
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
-
-	printf ( "B" );
-	
-	GearStepper -> Set ( 1 );
-
-	printf ( "C" );
-
-	OnShift ();
-
-	printf ( "C" );
 	
 	Drive -> Enable ();
-
-	printf ( "E" );
-
 	Shooter -> Enable ();
-
-	printf ( "F" );
-
 	Wench -> Enable ();
 
-	printf ( "G" );
+	Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
 	TeleopTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
@@ -361,50 +343,26 @@ void Robot :: TeleopInit ()
 void Robot :: TeleopPeriodic ()
 {
 
-	GearStepper -> Update ();
+	Behaviors -> Update ();
 
-	double TX = StickFilter -> Compute ( - StrafeStick -> GetX () );
-	double TY = StickFilter -> Compute ( StrafeStick -> GetY () );
-
-	double StickAnge = atan2 ( TX, TY );
-	double Magnitude = sqrt ( TX * TX + TY * TY );
-
-	Magnitude = DriveFilter -> Compute ( Magnitude );
-
-	TX = cos ( StickAnge ) * Magnitude;
-	TX = sin ( StickAnge ) * Magnitude;
-
-	Drive -> SetTranslation ( TX, TY );
-
-	double TR_X = RotateStick -> GetX ();
-	double TR_Y = RotateStick -> GetY ();
-	double TR = sqrt ( TR_X * TR_X + TR_Y * TR_Y );
-
-	TR *= ( TR_X >= 0 ) ? -1 : 1;
-	TR = StickFilter -> Compute ( TR );
-
-	Drive -> SetRotation ( TR );
-
-	Drive -> PushTransform ();
-
-	if ( ShootStick -> GetRawButton ( 1 ) )
+	if ( RotateStick -> GetRawButton ( 1 ) )
 	{
 
 		Shooter -> SetSpeed ( 1.0 );
 
 	}
-	else if ( ShootStick -> GetRawButton ( 3 ) )
+	else if ( RotateStick -> GetRawButton ( 3 ) )
 		Shooter -> SetSpeed ( 0.17 );
-	else if ( ShootStick -> GetRawButton ( 2 ) )
+	else if ( RotateStick -> GetRawButton ( 2 ) )
 		Shooter -> SetSpeed ( - 0.17 );
 	else
 		Shooter -> SetSpeed ( 0 );
 
 	Shooter -> PushSpeeds ();
 
-	if ( ShootStick -> GetRawButton ( 11 ) )
+	if ( RotateStick -> GetRawButton ( 4 ) )
 		Wench -> Open ();
-	else if ( ShootStick -> GetRawButton ( 10 ) )
+	else if ( RotateStick -> GetRawButton ( 5 ) )
 		Wench -> Close ();
 	else
 		Wench -> Stop ();
@@ -415,6 +373,8 @@ void Robot :: TeleopPeriodic ()
 
 void Robot :: TeleopEnd ()
 {
+
+	Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
 	printf ( "================\n=   Teleop X   =\n================\n" );
 	DsLcd -> UpdateLCD ();
@@ -451,41 +411,25 @@ void Robot :: TestInit ()
 	DisabledEnd ();
 	Mode = TestMode;
 
-	
-
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
 
-	TestPICServo -> ResetPosition ();
-
-	TestPICServo -> Enable ();
+	Arms -> Enable ();
 
 };
 
 void Robot :: TestPeriodic ()
 {
 
-	if ( StrafeStick -> GetRawButton ( 6 ) )
-	{
-		
-		TestPICServo -> Set ( 0.25 );
-
-	}
-	else
-	{
-
-		TestPICServo -> Set ( 0 );
-
-	}
-
-	printf ( "Position: %f\n", TestPICServo -> GetPosition () );
+	if ( ShootStick -> GetRawButton ( 6 ) )
+		Arms -> DriveToLimitsAndCalibrate ();
 
 };
 
 void Robot :: TestEnd ()
 {
 
-	TestPICServo -> Disable ();
+	ArmL -> Disable ();
 
 	printf ( "================\n=    Test X    =\n================\n" );
 
@@ -538,7 +482,7 @@ void Robot :: DisabledInit ()
 void Robot :: DisabledPeriodic ()
 {
 
-
+	Arms -> CalibratePICServoAnalogs ();
 
 };
 

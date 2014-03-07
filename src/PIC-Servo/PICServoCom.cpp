@@ -287,7 +287,7 @@ void PICServoCom :: ModuleStopMotor ( uint8_t Module, bool AmplifierEnabled, boo
 
 };
 
-void PICServoCom :: ModuleIOControl ( uint8_t Module, bool LimitSwitches = false, bool LimitAbruptly = true, bool ThreePhaseCom = false, bool AntiphasePWM = true, bool FastPath = false, bool StepAndDirection = false )
+void PICServoCom :: ModuleIOControl ( uint8_t Module, bool LimitSwitches, bool LimitAbruptly, bool ThreePhaseCom, bool AntiphasePWM, bool FastPath, bool StepAndDirection )
 {
 
 	uint8_t Value = LimitSwitches ? 0x04 : 0x00;
@@ -370,7 +370,7 @@ void PICServoCom :: ModuleLoadTrajectory ( uint8_t Module, int32_t Position, dou
 	ControlByte |= LoadPWM ? 0x08 : 0x00;
 	ControlByte |= EnableServo ? 0x10 : 0x00;
 	ControlByte |= VelocityProfileMode ? 0x20 : 0x00;
-	ControlByte |= VelocityProfileMode ? ( PWM >= 0 ? 0x00 : 0x40 ) : ( RelativePosition ? 0x40 : 0x00 );
+	ControlByte |= EnableServo ? ( RelativePosition ? 0x40 : 0x00 ) : ( PWM >= 0 ? 0x00 : 0x40 );
 	ControlByte |= ImmediateMotion ? 0x80 : 0x00;
 
 	Data [ 0 ] = ControlByte;

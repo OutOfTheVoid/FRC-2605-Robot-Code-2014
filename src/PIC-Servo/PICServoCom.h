@@ -77,7 +77,7 @@ public:
 	void ModuleReadStatus ( uint8_t Module, uint8_t Type, PICServoStatus_t * Status );
 	void ModuleStopMotor ( uint8_t Module, bool AmplifierEnabled, bool MotorOff = true, bool Abruptly = true );
 	void ModuleSetMetrics ( uint8_t Module, uint16_t P, uint16_t I, uint16_t D, uint16_t IntegrationLimit = 32767, uint8_t OutputLimit = 0xFF, int8_t CurrentLimit = 127, uint16_t PositionErrorLimit = 32767, uint8_t ServoRateDevisor = 1, uint8_t AmplifierDeadbandCompensation = 0, uint8_t StepRateMultiplier = 1 );
-	void ModuleIOControl ( uint8_t Module, bool LimitSwitches, bool LimitAbruptly, bool ThreePhaseCom, bool AntiphasePWM, bool FastPath, bool StepAndDirection );
+	void ModuleIOControl ( uint8_t Module, bool LimitSwitches, bool LimitAbruptly, bool ThreePhaseCom = false, bool AntiphasePWM = true, bool FastPath = false, bool StepAndDirection = false );
 	void ModuleClearStatus ( uint8_t Module );
 	void ModuleGetStatus ( uint8_t Module );
 	void ModuleHardReset ( uint8_t Module );

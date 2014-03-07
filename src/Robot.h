@@ -26,6 +26,10 @@
 
 #include "Util/Delegate.h"
 
+#include "Behaviors/BehaviorController.h"
+
+#include "TeleopDriveBehavior.h"
+
 #define DRIVE_RESPONSE_CURVE 2.0
 
 #define SPEED_SCALE_GEAR1 80
@@ -53,9 +57,9 @@
 
 #define VISION_PRIORITY 102
 
-#define BELT_P 1.2000
-#define BELT_I 0.0100
-#define BELT_D 0.0010
+#define BELT_P 3.2000
+#define BELT_I 0.0200
+#define BELT_D 0.3000
 
 #define BELT_ENCODER_CODES_PER_REVOLUTION 1024
 
@@ -80,6 +84,7 @@ public:
 
 	void InitControls ();
 	void InitMotors ();
+	void InitBehaviors ();
 
 	void DisabledInit ();
 	void DisabledPeriodic ();
@@ -185,11 +190,16 @@ private:
 	ShooterWench * Wench;
 	AsynchCANJaguar * WenchM;
 
+	// Arms
+
+	CollectorArms * Arms;
+
+	PICServo * ArmL;
+	PICServo * ArmR;
+
 	// PIC-Servo
 
 	PICServoController * PICServoControl;
-
-	PICServo * TestPICServo;
 
 	// TEST VARIABLES
 
@@ -200,6 +210,14 @@ private:
 	LEDStrip * LEDS;
 
 	LEDStripAnimator * TestAnimation;
+
+	// Behaviors
+
+	BehaviorController * Behaviors;
+
+	TeleopDriveBehavior * TeleopDrive;
+
+	char * TELEOP_DRIVE_BEHAVIOR;
 
 };
 

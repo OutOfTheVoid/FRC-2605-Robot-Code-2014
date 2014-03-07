@@ -37,12 +37,15 @@ public:
 	void ConfigVelocity ( double Velocity );
 	void ConfigAcceleration ( double Acceleration );
 
+	bool GetLimit1 ();
+	bool GetLimit2 ();
+
 	void Set ( double Value );
 
 	void ResetPosition ();
 	void SetCurrentPosition ( double Position );
 
-	void SetPID ( double P, double I, double D );
+	void SetPID ( double P, double I, double D, double OutputLimit = 1 );
 
 	void CalibrateAnalog ();
 	void SetAnalogInverted ( bool Inverted );

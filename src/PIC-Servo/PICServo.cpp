@@ -30,9 +30,6 @@ PICServo :: ~PICServo ()
 void PICServo :: SetControlMode ( PICServoControlMode ControlMode )
 {
 
-	if ( Enabled )
-		return;
-
 	this -> ControlMode = ControlMode;
 
 };
@@ -86,6 +83,20 @@ double PICServo :: GetPosition ()
 {
 
 	return ( static_cast <double> ( Controller -> PICServoReadPosition ( ModuleNumber ) ) / static_cast <double> ( EncoderCount ) );
+
+};
+
+bool PICServo :: GetLimit1 ()
+{
+
+	return Controller -> PICServoGetLimit1 ( ModuleNumber );
+
+};
+
+bool PICServo :: GetLimit2 ()
+{
+
+	return Controller -> PICServoGetLimit2 ( ModuleNumber );
 
 };
 
@@ -195,10 +206,10 @@ void PICServo :: SetCurrentPosition ( double Position )
 
 };
 
-void PICServo :: SetPID ( double P, double I, double D )
+void PICServo :: SetPID ( double P, double I, double D, double OutputLimit )
 {
 
-	Controller -> PICServoSetPID ( ModuleNumber, P, I, D );
+	Controller -> PICServoSetPID ( ModuleNumber, P, I, D, OutputLimit );
 
 };
 

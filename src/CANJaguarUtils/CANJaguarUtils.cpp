@@ -16,6 +16,8 @@ CANJagConfigInfo :: CANJagConfigInfo ()
 	MaxVoltage = 13;
 	Safety = false;
 	
+	FaultTime = 1.0;
+
 };
 
 void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
@@ -64,7 +66,8 @@ void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 		break;
 		
 	}
-	
+
+	Jag -> ConfigFaultTime ( Conf.FaultTime );
 	Jag -> ConfigMaxOutputVoltage ( Conf.MaxVoltage );
 	Jag -> ConfigNeutralMode ( Conf.NeutralAction );
 	Jag -> SetSafetyEnabled ( Conf.Safety );

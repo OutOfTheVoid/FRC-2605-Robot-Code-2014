@@ -36,6 +36,8 @@ typedef struct CANJagConfigInfo
 	UINT16 PotentiometerTurnsPerRev;
 	
 	bool Safety;
+
+	double FaultTime;
 	
 } CANJagConfigInfo;
 
