@@ -2,13 +2,23 @@
 
 Robot :: Robot ():
 	WheelConfig (),
-	BeltConfig (),
-	WenchConfig ()
+	BeltConfig ()
 {
 
 	Mode = RobotStartMode;
 
 	DsLcd = DriverStationLCD :: GetInstance ();
+
+	InitVision ();
+	InitSensors ();
+	InitMotors ();
+	InitControls ();
+	InitBehaviors ();
+
+};
+
+void Robot :: InitVision ()
+{
 
 	AutonomousTask = new Task ( "2605_Autonomous", (FUNCPTR) & Robot :: AutonomousTaskStub );
 	TeleopTask = new Task ( "2605_Teleop", (FUNCPTR) & Robot :: TeleopTaskStub );
@@ -16,15 +26,15 @@ Robot :: Robot ():
 
 	TargetingCamera = & AxisCamera :: GetInstance ( "10.26.5.11" );
 
-	InitMotors ();
-	InitControls ();
-	InitBehaviors ();
+};
 
-	//-----------------------------------------------//
+void Robot :: InitSensors ()
+{
 
-	//LEDS = new LEDStrip ( 1, 2, 3, 10 );
+	DistanceSensorAnalog = new AnalogChannel ( 1, 6 );
+	BallSensor = new IRDistanceSensor ( DistanceSensorAnalog );
 
-	//TestAnimation = BuildTestAnimation ( LEDS );
+	BallPositionSwitch = new DigitalInput ( 1 );
 
 };
 
@@ -107,18 +117,12 @@ void Robot :: InitMotors ()
 	Shooter -> SetMotorScale ( BELT_SPEED_SCALE );
 	Shooter -> SetInverted ( false, true );
 
-	// WENCH
-
-	WenchM = new AsynchCANJaguar ( JagServer, 9, WenchConfig );
-
-	Wench = new ShooterWench ( WenchM );
-
 	// ARMS
 
 	printf ( "PICSERVO\n" );
 
-	PICServoControl -> AddPICServo ( 1, false, 4, 3 );
-	PICServoControl -> AddPICServo ( 2, false, 3, 4 );
+	PICServoControl -> AddPICServo ( 1, false, 3, 3 );
+	PICServoControl -> AddPICServo ( 2, false, 4, 4 );
 
 	ArmL = PICServoControl -> GetModule ( 1 );
 
@@ -138,8 +142,14 @@ void Robot :: InitMotors ()
 
 	Arms = new CollectorArms ( ArmL, ArmR );
 
-	Arms -> SetInverted ( false, true );
+	Arms -> SetInverted ( false, false );
 	Arms -> SetFreeDrivePower ( 0.3 );
+
+	// WENCH
+
+	 //PICServoControl -> AddPICServo ( 3, false, 9, 5 );
+
+	 //WinchM = PICServoControl -> GetModule ( 3 );
 
 };
 
@@ -332,7 +342,6 @@ void Robot :: TeleopInit ()
 	
 	Drive -> Enable ();
 	Shooter -> Enable ();
-	Wench -> Enable ();
 
 	Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
@@ -360,15 +369,6 @@ void Robot :: TeleopPeriodic ()
 
 	Shooter -> PushSpeeds ();
 
-	if ( RotateStick -> GetRawButton ( 4 ) )
-		Wench -> Open ();
-	else if ( RotateStick -> GetRawButton ( 5 ) )
-		Wench -> Close ();
-	else
-		Wench -> Stop ();
-
-	Wench -> PushSpeed ();
-
 };
 
 void Robot :: TeleopEnd ()
@@ -383,7 +383,6 @@ void Robot :: TeleopEnd ()
 
 	Drive -> Disable ();
 	Shooter -> Disable ();
-	Wench -> Disable ();
 
 };
 
@@ -414,22 +413,17 @@ void Robot :: TestInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> UpdateLCD ();
 
-	Arms -> Enable ();
-
 };
 
 void Robot :: TestPeriodic ()
 {
 
-	if ( ShootStick -> GetRawButton ( 6 ) )
-		Arms -> DriveToLimitsAndCalibrate ();
+	printf ( "Disance Sensor Voltage: %f\n", DistanceSensorAnalog -> GetVoltage () );
 
 };
 
 void Robot :: TestEnd ()
 {
-
-	ArmL -> Disable ();
 
 	printf ( "================\n=    Test X    =\n================\n" );
 

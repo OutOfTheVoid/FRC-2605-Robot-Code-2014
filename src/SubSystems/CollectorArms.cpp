@@ -92,7 +92,7 @@ void CollectorArms :: SetFreeDrivePower ( double Power )
 
 };
 
-void CollectorArms :: DriveAngle ( double Position )
+bool CollectorArms :: DriveAngle ( double Position )
 {
 
 	ML -> SetControlMode ( PICServo :: kPosition );
@@ -103,6 +103,8 @@ void CollectorArms :: DriveAngle ( double Position )
 
 	ML -> Set ( Position * PreScale * ( LInverted ? -1 : 1 ) );
 	MR -> Set ( Position * PreScale * ( RInverted ? -1 : 1 ) );
+
+	return ML -> GetMoveDone () && MR-> GetMoveDone ();
 
 };
 
@@ -163,6 +165,13 @@ bool CollectorArms :: DriveToLimitsAndCalibrate ()
 	}
 
 	return LimitR && LimitL;
+
+};
+
+bool CollectorArms :: ArmsCalibrated ()
+{
+
+	return LCalibrated && RCalibrated;
 
 };
 

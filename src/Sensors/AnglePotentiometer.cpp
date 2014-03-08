@@ -41,6 +41,13 @@ void AnglePotentiometer :: SetOutputRange ( range_t Out )
 
 };
 
+void AnglePotentiometer :: SetUseAverage ( bool UseAverage )
+{
+
+	this -> UseAverage = UseAverage;
+
+};
+
 range_t AnglePotentiometer :: GetOutputRange ( range_t Out )
 {
 

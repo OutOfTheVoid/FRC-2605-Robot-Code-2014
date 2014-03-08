@@ -45,7 +45,6 @@ private:
 	DeadbandFilter * JoystickDeadband;
 
 	Delegate <void> * OnShift;
-
 	NumericStepper * Gear;
 
 	// Arms

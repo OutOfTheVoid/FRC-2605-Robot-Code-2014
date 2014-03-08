@@ -100,6 +100,13 @@ bool PICServo :: GetLimit2 ()
 
 };
 
+bool PICServo :: GetMoveDone ()
+{
+
+	return Controller -> PICServoGetMoveDone ( ModuleNumber );
+
+};
+
 void PICServo :: ConfigVelocity ( double Velocity )
 {
 
@@ -206,10 +213,10 @@ void PICServo :: SetCurrentPosition ( double Position )
 
 };
 
-void PICServo :: SetPID ( double P, double I, double D, double OutputLimit )
+void PICServo :: SetPID ( double P, double I, double D, double OutputLimit, uint32_t PositionErrorLimit )
 {
 
-	Controller -> PICServoSetPID ( ModuleNumber, P, I, D, OutputLimit );
+	Controller -> PICServoSetPID ( ModuleNumber, P, I, D, OutputLimit, PositionErrorLimit );
 
 };
 

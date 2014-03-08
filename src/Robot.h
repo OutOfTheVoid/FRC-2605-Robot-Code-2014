@@ -19,6 +19,7 @@
 #include "Filters/DeadbandFilter.h"
 
 #include "Sensors/PIDOutputSensor.h"
+#include "Sensors/IRDistanceSensor.h"
 
 #include "Decorations/SHSAnimations.h"
 
@@ -85,6 +86,8 @@ public:
 	void InitControls ();
 	void InitMotors ();
 	void InitBehaviors ();
+	void InitVision ();
+	void InitSensors ();
 
 	void DisabledInit ();
 	void DisabledPeriodic ();
@@ -183,12 +186,11 @@ private:
 
 	ShooterBelts * Shooter;
 
+	DigitalInput * BallPositionSwitch;
+
 	// Wench
 
-	CANJagConfigInfo WenchConfig;
-
-	ShooterWench * Wench;
-	AsynchCANJaguar * WenchM;
+	PICServo * WinchM;
 
 	// Arms
 
@@ -218,6 +220,12 @@ private:
 	TeleopDriveBehavior * TeleopDrive;
 
 	char * TELEOP_DRIVE_BEHAVIOR;
+	char * BALL_PICKUP_BEHAVIOR;
+
+	//
+
+	AnalogChannel * DistanceSensorAnalog;
+	IRDistanceSensor * BallSensor;
 
 };
 

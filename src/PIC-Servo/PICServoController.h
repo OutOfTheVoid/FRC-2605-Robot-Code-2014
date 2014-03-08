@@ -9,6 +9,7 @@
 
 #define PICSERVO_CONTROL_TASK_PRIORITY 50
 #define PICSERVO_CONTROL_TASK_STACKSIZE 0x20000
+#define MAXIMUM_UPDATE_DELTA_TIME 0.001
 
 class PICServoController
 {
@@ -106,6 +107,7 @@ private:
 		double I;
 		double D;
 		double MaxOutput;
+		uint32_t PositionError;
 
 	} SetPIDMessage;
 
@@ -128,6 +130,7 @@ private:
 		PICSERVO_INIT_MESSAGE,
 		PICSERVO_REINIT_MESSAGE,
 		PICSERVO_GETLIMIT_MESSAGE,
+		PICSERVO_GETMOVEDONE_MESSAGE,
 
 	};
 
@@ -149,13 +152,15 @@ private:
 	void PICServoSetVelocityA ( uint8_t ModuleNumber, double Velocity, double Acceleration );
 	void PICServoSetVelocity ( uint8_t ModuleNumber, double Velocity );
 
-	void PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput );
+	void PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput, uint32_t PositionErrorLimit );
 
 	void PICServoCalibrateAnalog ( uint8_t ModuleNumber );
 	void PICServoSetAnalogInverted ( uint8_t ModuleNumber, bool Inverted );
 
 	bool PICServoGetLimit1 ( uint8_t ModuleNumber );
 	bool PICServoGetLimit2 ( uint8_t ModuleNumber );
+
+	bool PICServoGetMoveDone ( uint8_t ModuleNumber );
 
 	void RunLoop ();
 

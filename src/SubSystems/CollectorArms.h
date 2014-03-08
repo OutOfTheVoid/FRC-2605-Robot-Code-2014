@@ -21,10 +21,12 @@ public:
 	void SetFreeDrivePower ( double Power );
 
 	void DrivePWM ( double Value );
-	void DriveAngle ( double Position );
+	bool DriveAngle ( double Position );
 	bool DriveToLimitsAndCalibrate ();
 
 	void Stop ();
+
+	bool ArmsCalibrated ();
 
 	void CalibratePICServoAnalogs ();
 

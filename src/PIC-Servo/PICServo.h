@@ -40,12 +40,14 @@ public:
 	bool GetLimit1 ();
 	bool GetLimit2 ();
 
+	bool GetMoveDone ();
+
 	void Set ( double Value );
 
 	void ResetPosition ();
 	void SetCurrentPosition ( double Position );
 
-	void SetPID ( double P, double I, double D, double OutputLimit = 1 );
+	void SetPID ( double P, double I, double D, double OutputLimit = 1, uint32_t PositionErrorLimit = 32767 );
 
 	void CalibrateAnalog ();
 	void SetAnalogInverted ( bool Inverted );
@@ -73,6 +75,8 @@ private:
 	bool Enabled;
 
 	uint8_t StatusType;
+
+	double LastStatusTime;
 
 	PICServoCom :: PICServoStatus_t LastStatus;
 
