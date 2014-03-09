@@ -15,6 +15,10 @@ Robot :: Robot ():
 	InitControls ();
 	InitBehaviors ();
 
+	TestCount = 0;
+	AutoCount = 0;
+	TeleCount = 0;
+
 };
 
 void Robot :: InitVision ()
@@ -117,24 +121,30 @@ void Robot :: InitMotors ()
 	Shooter -> SetMotorScale ( BELT_SPEED_SCALE );
 	Shooter -> SetInverted ( false, true );
 
-	// ARMS
+	// ARMS/WINCH
 
 	printf ( "PICSERVO\n" );
 
-	PICServoControl -> AddPICServo ( 1, false, 3, 3 );
-	PICServoControl -> AddPICServo ( 2, false, 4, 4 );
+	PICServoControl -> AddPICServo ( 1, false, 3, 4 );
+	printf ( "# 1 Added!\n" );
+
+	PICServoControl -> AddPICServo ( 3, false, 4, 3 );
+	printf ( "# 3 Added!\n" );
+
+	PICServoControl -> AddPICServo ( 4, false, 9, 5 );
+	printf ( "# 4 Added!\n");
 
 	ArmL = PICServoControl -> GetModule ( 1 );
 
-	ArmL -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
 	ArmL -> SetEncoderResolution ( 360 * 4 );
+	ArmL -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
 	ArmL -> ConfigVelocity ( 0.4 );
 	ArmL -> ConfigAcceleration ( 0.02 );
 
-	ArmR = PICServoControl -> GetModule ( 2 );
+	ArmR = PICServoControl -> GetModule ( 3 );
 
-	ArmR -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
 	ArmR -> SetEncoderResolution ( 360 * 4 );
+	ArmR -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
 	ArmR -> ConfigVelocity ( 0.4 );
 	ArmR -> ConfigAcceleration ( 0.02 );
 
@@ -144,12 +154,18 @@ void Robot :: InitMotors ()
 
 	Arms -> SetInverted ( false, false );
 	Arms -> SetFreeDrivePower ( 0.3 );
+	Arms -> SetZeros ();
 
-	// WENCH
+	// WINCH
 
-	 //PICServoControl -> AddPICServo ( 3, false, 9, 5 );
+	WinchM = PICServoControl -> GetModule ( 4 );
 
-	 //WinchM = PICServoControl -> GetModule ( 3 );
+	WinchM -> SetEncoderResolution ( 1000 );
+	WinchM -> SetPID ( 1.0, 0, 3.0, 1.0, 0.2, 0.23529 );
+	WinchM -> ConfigAcceleration ( 0.0015258789 );
+	WinchM -> ConfigVelocity ( 1.525878 );
+
+	Winch = new ShooterWinch ( WinchM );
 
 };
 
@@ -163,7 +179,11 @@ void Robot :: InitBehaviors ()
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
 	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms );
 
+	BALL_PICKUP_BEHAVIOR = "BallPickup";
+	BallPickup = new BallPickupBehavior ( Shooter, Arms, Drive, GearStepper, OnShiftDelegate, BallSensor, BallPositionSwitch );
+
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
+	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
 
 };
 
@@ -297,6 +317,8 @@ void Robot :: AutonomousInit ()
 void Robot :: AutonomousPeriodic ()
 {
 
+	AutoCount ++;
+
 	/*TestAnimation -> Update ();
 
 	if ( LEDS -> HasNewData () )
@@ -351,6 +373,8 @@ void Robot :: TeleopInit ()
 
 void Robot :: TeleopPeriodic ()
 {
+
+	TeleCount ++;
 
 	Behaviors -> Update ();
 
@@ -411,14 +435,136 @@ void Robot :: TestInit ()
 	Mode = TestMode;
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "Please select a test:" );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "8: Cal. Wench" );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "11: Cal. Ball Sensor" );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "10: Pickup Ball" );
 	DsLcd -> UpdateLCD ();
+
+	ArmL -> ResetPosition ();
+	ArmR -> ResetPosition ();
+
+	TestPeriodMode = 0;
+
+	while ( TestPeriodMode == 0 && IsEnabled () )
+	{
+
+		if ( StrafeStick -> GetRawButton ( 8 ) )
+		{
+
+			TestPeriodMode = 1;
+
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE WENCH **" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Use 11/10 to move wench" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "to 0, with slack. Then," );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "press 3." );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "BALL: %f m", BallSensor -> Get () );
+			DsLcd -> UpdateLCD ();
+
+			Winch -> Enable ();
+
+		}
+
+		if ( StrafeStick -> GetRawButton ( 11 ) )
+		{
+
+			TestPeriodMode = 2;
+
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE BALL SENSE **" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Place ball 0.2m from," );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "bot, press 3." );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "BALL: %f m", BallSensor -> Get () );
+			DsLcd -> UpdateLCD ();
+
+		}
+
+		if ( StrafeStick -> GetRawButton ( 10 ) )
+		{
+
+			TestPeriodMode = 3;
+			
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** PICKUP BALL **" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "BALL: %f m", BallSensor -> Get () );
+			DsLcd -> UpdateLCD ();
+
+		}
+
+		m_ds -> WaitForData ();
+		Wait ( 0.01 );
+
+	}
 
 };
 
 void Robot :: TestPeriodic ()
 {
 
-	printf ( "Disance Sensor Voltage: %f\n", DistanceSensorAnalog -> GetVoltage () );
+	TestCount ++;
+
+	switch ( TestPeriodMode )
+	{
+
+		case 1:
+
+			if ( StrafeStick -> GetRawButton ( 10 ) )
+				Winch -> DrivePWM ( 0.5 );
+			else if ( StrafeStick -> GetRawButton ( 11 ) )
+				Winch -> DrivePWM ( - 0.5 );
+			else
+				Winch -> Stop ();
+
+			if ( StrafeStick -> GetRawButton ( 3 ) )
+				TestInit ();
+
+			break;
+		case 2:
+
+			if ( StrafeStick -> GetRawButton ( 3 ) )
+			{
+
+				BallSensor -> CalibLowPoint ( 0.2 );
+
+				TestPeriodMode = 4;
+
+				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE BALL SENSE **" );
+				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Place ball 0.8m from," );
+				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "bot, press 2." );
+				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "" );
+				DsLcd -> UpdateLCD ();
+
+			}
+
+			break;
+
+		case 3:
+
+			TestInit ();
+
+			break;
+
+		case 4:
+
+			if ( StrafeStick -> GetRawButton ( 2 ) )
+			{
+
+				BallSensor -> CalibHighPoint ( 0.8 );
+
+				TestInit ();
+
+			}
+
+			break;
+
+		default:
+
+			TestInit ();
+
+			break;
+	}
 
 };
 

@@ -209,14 +209,44 @@ void PICServo :: ResetPosition ()
 void PICServo :: SetCurrentPosition ( double Position )
 {
 
-	Controller -> PICServoSetCurrentPosition ( ModuleNumber, Position * static_cast <double> ( EncoderCount ) );
+	Controller -> PICServoSetCurrentPosition ( ModuleNumber, Position * static_cast <double> ( EncoderCount ) ); //
 
 };
 
-void PICServo :: SetPID ( double P, double I, double D, double OutputLimit, uint32_t PositionErrorLimit )
+void PICServo :: SetPID ( double P, double I, double D, double OutputLimit, double PositionErrorLimit, double DeadbandCompensation )
 {
 
-	Controller -> PICServoSetPID ( ModuleNumber, P, I, D, OutputLimit, PositionErrorLimit );
+	if ( PositionErrorLimit == DBL_MAX )
+		PositionErrorLimit = 32767;
+	else
+		PositionErrorLimit = PositionErrorLimit * static_cast <double> ( EncoderCount );
+
+	Controller -> PICServoSetPID ( ModuleNumber, P, I, D, OutputLimit, static_cast <uint32_t> ( PositionErrorLimit ), static_cast <uint8_t> ( DeadbandCompensation * 0xFF ) );
+
+	this -> P = P;
+	this -> I = I;
+	this -> D = D;
+
+};
+
+double PICServo :: GetLastP ()
+{
+
+	return P;
+
+};
+
+double PICServo :: GetLastI ()
+{
+
+	return I;
+
+};
+
+double PICServo :: GetLastD ()
+{
+
+	return D;
 
 };
 

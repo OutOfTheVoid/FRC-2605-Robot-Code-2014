@@ -5,6 +5,8 @@
 #include "AnalogCANJaguarPipeServer.h"
 #include "PICServoCom.h"
 
+#define DBL_MAX 1.7976931348623157e+308
+
 #define PICSERVO_SERVO_RATE 1953.125
 
 class PICServo
@@ -47,7 +49,11 @@ public:
 	void ResetPosition ();
 	void SetCurrentPosition ( double Position );
 
-	void SetPID ( double P, double I, double D, double OutputLimit = 1, uint32_t PositionErrorLimit = 32767 );
+	void SetPID ( double P, double I, double D, double OutputLimit = 1, double PositionErrorLimit = DBL_MAX, double DeadbandCompensation = 1.0 );
+
+	double GetLastP ();
+	double GetLastI ();
+	double GetLastD ();
 
 	void CalibrateAnalog ();
 	void SetAnalogInverted ( bool Inverted );
@@ -64,6 +70,10 @@ private:
 
 	double Acceleration;
 	double Velocity;
+
+	double P;
+	double I;
+	double D;
 
 	bool NewAcceleration;
 	bool NewVelocity;

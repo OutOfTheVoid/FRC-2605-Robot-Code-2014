@@ -9,6 +9,8 @@
 #include "src/SubSystems/CollectorArms.h"
 #include "src/SubSystems/MecanumDrive.h"
 
+#include "src/Sensors/IRDistanceSensor.h"
+
 #include "src/Controls/NumericStepper.h"
 
 #include "src/Util/Delegate.h"
@@ -18,7 +20,7 @@
 #define ARM_OUT_POSTION 0.01
 #define ARM_IN_POSITION 0.3
 
-#define BALL_DISTANCE_THRESHOLD 0.20
+#define BALL_SENSOR_THRESHOLD 0.20
 
 #define MAX_POSITION_WAIT 1.5
 
@@ -26,7 +28,7 @@ class BallPickupBehavior : public Behavior
 {
 public:
 
-	BallPickupBehavior ( ShooterBelts * Belts, CollectorArms * Arms, MecanumDrive * Drive, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate );
+	BallPickupBehavior ( ShooterBelts * Belts, CollectorArms * Arms, MecanumDrive * Drive, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, IRDistanceSensor * BallSensor, DigitalInput * BallLimit );
 	~BallPickupBehavior ();
 
 	void Start ();
@@ -40,9 +42,9 @@ private:
 	{
 
 		STATE_START = 0,
-		STATE_CALIBRATE_ARMS,
 		STATE_MOVE_ARMS_OUT,
 		STATE_DRIVE_TO_BALL,
+		STATE_CLAMP_BALL,
 
 	} BehaviorState;
 
@@ -55,6 +57,9 @@ private:
 
 	Delegate <void> * OnShift;
 	NumericStepper * Gear;
+
+	IRDistanceSensor * BallSensor;
+	DigitalInput * BallLimit;
 
 };
 

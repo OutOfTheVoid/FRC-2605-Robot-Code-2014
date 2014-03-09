@@ -108,6 +108,7 @@ private:
 		double D;
 		double MaxOutput;
 		uint32_t PositionError;
+		uint8_t DeadbandCompensation;
 
 	} SetPIDMessage;
 
@@ -131,6 +132,7 @@ private:
 		PICSERVO_REINIT_MESSAGE,
 		PICSERVO_GETLIMIT_MESSAGE,
 		PICSERVO_GETMOVEDONE_MESSAGE,
+		PICSERVO_SETLIMITING_MESSAGE,
 
 	};
 
@@ -152,7 +154,7 @@ private:
 	void PICServoSetVelocityA ( uint8_t ModuleNumber, double Velocity, double Acceleration );
 	void PICServoSetVelocity ( uint8_t ModuleNumber, double Velocity );
 
-	void PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput, uint32_t PositionErrorLimit );
+	void PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput, uint32_t PositionErrorLimit, uint8_t DeadbandCompensation );
 
 	void PICServoCalibrateAnalog ( uint8_t ModuleNumber );
 	void PICServoSetAnalogInverted ( uint8_t ModuleNumber, bool Inverted );
@@ -161,6 +163,8 @@ private:
 	bool PICServoGetLimit2 ( uint8_t ModuleNumber );
 
 	bool PICServoGetMoveDone ( uint8_t ModuleNumber );
+
+	void PICServoSetLimiting ( uint8_t ModuleNumber, bool Limiting );
 
 	void RunLoop ();
 

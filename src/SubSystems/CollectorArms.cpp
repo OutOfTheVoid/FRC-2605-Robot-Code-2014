@@ -82,6 +82,14 @@ void CollectorArms :: SetPreScale ( double PreScale )
 
 };
 
+void CollectorArms :: SetZeros ()
+{
+
+	ML -> ResetPosition ();
+	MR -> ResetPosition ();
+
+};
+
 void CollectorArms :: SetFreeDrivePower ( double Power )
 {
 
@@ -92,17 +100,14 @@ void CollectorArms :: SetFreeDrivePower ( double Power )
 
 };
 
-bool CollectorArms :: DriveAngle ( double Position )
+bool CollectorArms :: DrivePositions ( double L, double R )
 {
 
 	ML -> SetControlMode ( PICServo :: kPosition );
 	MR -> SetControlMode ( PICServo :: kPosition );
 
-	LCalibrated = false;
-	RCalibrated = false;
-
-	ML -> Set ( Position * PreScale * ( LInverted ? -1 : 1 ) );
-	MR -> Set ( Position * PreScale * ( RInverted ? -1 : 1 ) );
+	ML -> Set ( L * PreScale * ( LInverted ? -1 : 1 ) );
+	MR -> Set ( R * PreScale * ( RInverted ? -1 : 1 ) );
 
 	return ML -> GetMoveDone () && MR-> GetMoveDone ();
 
@@ -116,62 +121,6 @@ void CollectorArms :: DrivePWM ( double Value )
 
 	MR -> Set ( Value );
 	ML -> Set ( Value );
-
-};
-
-bool CollectorArms :: DriveToLimitsAndCalibrate ()
-{
-
-	ML -> SetControlMode ( PICServo :: kPWM );
-	MR -> SetControlMode ( PICServo :: kPWM );
-
-	bool LimitL = ML -> GetLimit2 ();
-	bool LimitR = MR -> GetLimit2 ();
-
-	if ( ! LimitL )
-	{
-
-		ML -> Set ( FreePWM * ( LInverted ? 0.7 : - 0.7 ) );
-	
-	}
-	else if ( ! LCalibrated )
-	{
-
-		printf ( "DRIVEANGLE_LEFT_CALIB\n" );
-
-		ML -> ResetPosition ();
-		ML -> Set ( 0 );
-
-		LCalibrated = true;
-
-	}
-
-	if ( ! LimitR )
-	{
-
-		MR -> Set ( FreePWM * ( RInverted ? 0.7 : - 0.7 ) );
-
-	}
-	else if ( ! RCalibrated )
-	{
-
-		printf ( "DRIVEANGLE_RIGHT_CALIB\n" );
-
-		MR -> ResetPosition ();
-		MR -> Set ( 0 );
-
-		RCalibrated = true;
-
-	}
-
-	return LimitR && LimitL;
-
-};
-
-bool CollectorArms :: ArmsCalibrated ()
-{
-
-	return LCalibrated && RCalibrated;
 
 };
 

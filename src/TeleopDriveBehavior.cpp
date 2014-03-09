@@ -97,12 +97,6 @@ void TeleopDriveBehavior :: ControlArms ()
 		Arms -> DrivePWM ( 0.5 );
 	if ( StrafeStick -> GetRawButton ( 10 ) )
 		Arms -> DrivePWM ( - 0.5 );
-	else if ( StrafeStick -> GetRawButton ( 8 ) )
-		Arms -> DriveToLimitsAndCalibrate ();
-	else if ( StrafeStick -> GetRawButton ( 6 ) )
-		Arms -> DriveAngle ( 0 );
-	else if ( StrafeStick -> GetRawButton ( 7 ) )
-		Arms -> DriveAngle ( 0.25 );
 	else
 		Arms -> DrivePWM ( 0 );
 

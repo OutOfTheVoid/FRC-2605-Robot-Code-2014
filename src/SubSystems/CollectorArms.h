@@ -14,21 +14,30 @@ public:
 	void Disable ();
 	bool GetEnabled ();
 
+	void SetPreScale ( double PreScale );
 	void SetInverted ( bool L, bool R );
 
-	void SetPreScale ( double PreScale );
+	void SetZeros ();
+
+	bool DrivePositions ( double L, double R );
 
 	void SetFreeDrivePower ( double Power );
-
 	void DrivePWM ( double Value );
-	bool DriveAngle ( double Position );
-	bool DriveToLimitsAndCalibrate ();
 
 	void Stop ();
 
-	bool ArmsCalibrated ();
-
 	void CalibratePICServoAnalogs ();
+
+	typedef enum 
+	{
+
+		ARMS_OFF,
+		ARMS_BEGIN_1,
+		ARMS_BEGIN_2,
+		ARMS_OPEN,
+		ARMS_CLOSED,
+
+	} ArmsPreset;
 
 private:
 

@@ -13,7 +13,7 @@
 
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/ShooterBelts.h"
-#include "SubSystems/ShooterWench.h"
+#include "SubSystems/ShooterWinch.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -29,6 +29,7 @@
 
 #include "Behaviors/BehaviorController.h"
 
+#include "BallPickupBehavior.h"
 #include "TeleopDriveBehavior.h"
 
 #define DRIVE_RESPONSE_CURVE 2.0
@@ -129,9 +130,13 @@ public:
 
 private:
 
-	// Operating mode used to call *End methods
+	// Operating control variables
 	
 	RobotMode Mode;
+
+	uint32_t TeleCount;
+	uint32_t AutoCount;
+	uint32_t TestCount;
 
 	// Driver station readout
 	
@@ -174,7 +179,6 @@ private:
 	// Vision
 
 	AxisCamera * TargetingCamera;
-
 	bool TargetFound;
 
 	// Shooter
@@ -191,6 +195,8 @@ private:
 	// Wench
 
 	PICServo * WinchM;
+
+	ShooterWinch * Winch;
 
 	// Arms
 
@@ -218,14 +224,19 @@ private:
 	BehaviorController * Behaviors;
 
 	TeleopDriveBehavior * TeleopDrive;
+	BallPickupBehavior * BallPickup;
 
 	char * TELEOP_DRIVE_BEHAVIOR;
 	char * BALL_PICKUP_BEHAVIOR;
 
-	//
+	// Ball stuff
 
 	AnalogChannel * DistanceSensorAnalog;
 	IRDistanceSensor * BallSensor;
+
+	// TEST STUFF
+
+	uint8_t TestPeriodMode;
 
 };
 

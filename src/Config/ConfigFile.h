@@ -3,6 +3,8 @@
 
 #include "Jansson/jansson.h"
 
+#include "ConfigSection.h"
+
 class ConfigFile
 {
 public:

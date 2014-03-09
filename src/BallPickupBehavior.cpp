@@ -1,6 +1,6 @@
 #include "BallPickupBehavior.h"
 
-BallPickupBehavior :: BallPickupBehavior ( ShooterBelts * Belts, CollectorArms * Arms, MecanumDrive * Drive, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate  )
+BallPickupBehavior :: BallPickupBehavior ( ShooterBelts * Belts, CollectorArms * Arms, MecanumDrive * Drive, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, IRDistanceSensor * BallSensor, DigitalInput * BallLimit )
 {
 
 	this -> Belts = Belts;
@@ -9,6 +9,9 @@ BallPickupBehavior :: BallPickupBehavior ( ShooterBelts * Belts, CollectorArms *
 
 	this -> Gear = GearStepper;
 	this -> OnShift = OnShiftDelegate;
+
+	this -> BallSensor = BallSensor;
+	this -> BallLimit = BallLimit;
 
 };
 
@@ -36,6 +39,8 @@ void BallPickupBehavior :: Start ()
 	if ( ! Belts -> GetEnabled () )
 		Belts -> Enable ();
 
+	BallSensor -> SetMeasurementUnits ( IRDistanceSensor :: kMeters );
+
 };
 
 void BallPickupBehavior :: Update ()
@@ -45,56 +50,6 @@ void BallPickupBehavior :: Update ()
 	{
 
 	case STATE_START:
-
-		Belts -> SetSpeed ( BELT_COLLECTION_SPEED );
-
-		if ( ! Arms -> ArmsCalibrated () )
-		{
-
-			State = STATE_CALIBRATE_ARMS;
-			TimerStart = Timer :: GetPPCTimestamp ();
-
-		}
-		else
-		{
-
-			State = STATE_MOVE_ARMS_OUT;
-			TimerStart = Timer :: GetPPCTimestamp ();
-
-		}
-
-	case STATE_CALIBRATE_ARMS:
-
-		if ( Arms -> DriveToLimitsAndCalibrate () || ( ( Timer :: GetPPCTimestamp () - TimerStart ) > MAX_POSITION_WAIT ) )
-		{
-
-			State = STATE_DRIVE_TO_BALL;
-			TimerStart = Timer :: GetPPCTimestamp ();
-
-		}
-		else
-			break;
-
-	case STATE_MOVE_ARMS_OUT:
-
-		if ( Arms -> DriveAngle ( ARM_OUT_POSTION ) || ( ( Timer :: GetPPCTimestamp () - TimerStart ) > MAX_POSITION_WAIT ) )
-		{
-
-			State = STATE_DRIVE_TO_BALL;
-
-		}
-		else
-			break;
-
-	case STATE_DRIVE_TO_BALL:
-
-		Drive -> SetTranslation ( 0, - 0.5 );
-		Drive -> PushTransform ();
-
-
-
-		break;
-
 	default:
 		break;
 
@@ -106,7 +61,8 @@ void BallPickupBehavior :: Stop ()
 {
 
 	Drive -> Disable ();
-
+	Arms -> Disable ();
+	Belts -> Disable ();
 
 };
 

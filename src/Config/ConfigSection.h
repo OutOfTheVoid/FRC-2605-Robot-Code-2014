@@ -1,20 +1,31 @@
 #ifndef SHS_2605_CONFIG_SECTION_H
 #define SHS_2605_CONFIG_SECTION_H
 
+#include "ConfigFile.h"
+
+#include "Jansson/jansson.h"
+
 class ConfigSection
 {
 public:
 
+	friend class ConfigFile;
+
+	ConfigSection ( const char * Name );
 	virtual ~ConfigSection ();
+	
+protected:
 
-	virtual const char * GetSectionName ();
-	virtual const char ** GetRealValueKeys ();
-	virtual const char ** GetIntValueKeys ();
-	virtual const char ** GetStringValueKeys ();
-	virtual const char ** GetBoolValueKeys ();
+	virtual const char * GetName ();
 
-private:
+	virtual json_t * GetValueObject ();
+	virtual void SetLoadedValueObject ( json_t * ValueNode );
 
+	virtual bool IsNodeNew ();
+
+	json_t * SectionNode;
+	const char * Name;
+	bool New;
 
 };
 

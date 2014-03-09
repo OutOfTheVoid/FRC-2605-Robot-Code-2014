@@ -165,9 +165,16 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 		SendMessage -> Command = PICSERVO_REINIT_MESSAGE;
 		SendMessage -> Data = ModuleNumber;
 
-		msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+		printf ( "Sending message...\n" );
+
+		if ( msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT ) == ERROR )
+			printf ( "Error!\n" );
+
+		printf ( "Receiving message...\n" );
 
 		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+
+		printf ( "!!!\n" );
 
 		delete ResponseMessage;
 
@@ -175,8 +182,6 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 
 	semGive ( ResponseSemaphore );
 	semGive ( ModuleSemaphore );
-
-	Com -> SerialTaskUnlock ();
 
 };
 
@@ -395,7 +400,7 @@ int32_t PICServoController :: PICServoReadPosition ( uint8_t ModuleNumber )
 
 };
 
-void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput, uint32_t PositionError )
+void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, double I, double D, double MaxOutput, uint32_t PositionError, uint8_t DeadbandCompensation )
 {
 
 	if ( ! Started )
@@ -411,6 +416,7 @@ void PICServoController :: PICServoSetPID ( uint8_t ModuleNumber, double P, doub
 	SPIDMessage -> D = D;
 	SPIDMessage -> MaxOutput = MaxOutput;
 	SPIDMessage -> PositionError = PositionError;
+	SPIDMessage -> DeadbandCompensation = DeadbandCompensation;
 
 	SendMessage -> Command = PICSERVO_SETPID_MESSAGE;
 	SendMessage -> Data = reinterpret_cast <uint32_t> ( SPIDMessage );
@@ -602,6 +608,21 @@ bool  PICServoController :: PICServoGetMoveDone ( uint8_t ModuleNumber )
 	delete ResponseMessage;
 
 	return Done;
+
+};
+
+void PICServoController :: PICServoSetLimiting ( uint8_t ModuleNumber, bool Limiting )
+{
+
+	if ( ! Started )
+		return;
+
+	ServerMessage * SendMessage = new ServerMessage ();
+
+	SendMessage -> Command = PICSERVO_SETLIMITING_MESSAGE;
+	SendMessage -> Data = ModuleNumber | ( Limiting ? 0x100 : 0x000 );
+
+	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
 };
 
@@ -805,6 +826,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_READPOSITION_MESSAGE:
 
+				semTake ( ModuleSemaphore, WAIT_FOREVER );
+
 				PICServoCom :: PICServoStatus_t Status;
 
 				Com -> ModuleReadStatus ( Message -> Data, PICSERVO_STATUS_TYPE_POSITION | Module -> StatusType, & Status );
@@ -856,8 +879,6 @@ void PICServoController :: RunLoop ()
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
-				//TODO: Remove extra read status, No-op not needed.
-
 				Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
 
 				semGive ( ModuleSemaphore );
@@ -876,7 +897,7 @@ void PICServoController :: RunLoop ()
 				Module = Modules [ SPIDMessage -> Index ];
 
 				Com -> SetStatusType ( Module -> StatusType );
-				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ), 32767, static_cast <uint8_t> ( SPIDMessage -> MaxOutput * 0xFF ), 127, SPIDMessage -> PositionError );
+				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ), 32767, static_cast <uint8_t> ( SPIDMessage -> MaxOutput * 0xFF ), 127, SPIDMessage -> PositionError, 1, SPIDMessage -> DeadbandCompensation );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
@@ -914,12 +935,6 @@ void PICServoController :: RunLoop ()
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
-				printf ( "Enabling Limit Switches..." );
-
-				Com -> ModuleIOControl ( Message -> Data, true, false );
-				Com -> ReceiveStatusPacket ();
-				Com -> GetStatus ( & Module -> LastStatus );
-
 				Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
 
 				ResponseMessage = new ServerMessage ();
@@ -952,12 +967,6 @@ void PICServoController :: RunLoop ()
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
-				printf ( "Enabling Limit Switches..." );
-
-				Com -> ModuleIOControl ( Message -> Data, true, false );
-				Com -> ReceiveStatusPacket ();
-				Com -> GetStatus ( & Module -> LastStatus );
-
 				Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
 
 				ResponseMessage = new ServerMessage ();
@@ -972,6 +981,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_GETLIMIT_MESSAGE:
+
+				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				Module = Modules [ Message -> Data ];
 
@@ -996,11 +1007,15 @@ void PICServoController :: RunLoop ()
 
 				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
+				semGive ( ModuleSemaphore );
+
 				delete Message;
 
 				break;
 
 			case PICSERVO_GETMOVEDONE_MESSAGE:
+
+				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				Module = Modules [ Message -> Data ];
 
@@ -1018,9 +1033,28 @@ void PICServoController :: RunLoop ()
 
 				msgQSend ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
 
+				semGive ( ModuleSemaphore );
+
 				delete Message;
 
 				break;
+
+			case PICSERVO_SETLIMITING_MESSAGE:
+
+				semTake ( ModuleSemaphore, WAIT_FOREVER );
+
+				Module = Modules [ Message -> Data ];
+
+				Com -> SetStatusType ( Module -> StatusType );
+				Com -> ModuleIOControl ( Message -> Data & 0xFF, ( Message -> Data & 0x100 ) != 0, false );
+				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
+
+				Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
+
+				semGive ( ModuleSemaphore );
+
+				delete Message;
 
 			default:
 
@@ -1034,6 +1068,8 @@ void PICServoController :: RunLoop ()
 			}
 
 		}
+		else
+			printf ( "Runloop Error!\n" );
 
 	}
 

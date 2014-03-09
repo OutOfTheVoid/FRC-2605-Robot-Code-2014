@@ -31,8 +31,8 @@ public:
 	void SetInputVoltageRange ( range_t In );
 	void SetOutputRange ( range_t Out );
 
-	void CalibLowPoint ();
-	void CalibHighPoint ();
+	void CalibLowPoint ( double IntendedDist );
+	void CalibHighPoint ( double IntendedDist );
 
 	void SetUseAverage ( bool UseAverage );
 
@@ -47,6 +47,9 @@ private:
 	AnalogChannel * Channel;
 
 	bool UseAverage;
+
+	double OffLow;
+	double InLow;
 
 	MapFilter * Attenuator;
 

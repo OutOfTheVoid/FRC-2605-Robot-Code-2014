@@ -8,12 +8,22 @@ IRDistanceSensor :: IRDistanceSensor ( AnalogChannel * Channel )
 	Unit = IRDistanceSensor :: kMeters;
 	UseAverage = true;
 
+	range_t In ( 0.3, 3.3 );
+	range_t Out ( 0.8, 0.09 );
+
+	In.Low = 0.3;
+	In.High = 3.3;
+	Out.Low = 0.8;
+	Out.High = 0.09;
+
+	Attenuator = new MapFilter ( In, Out );
+
 };
 
 IRDistanceSensor :: ~IRDistanceSensor ()
 {
 
-
+	delete Attenuator;
 
 };
 
@@ -45,21 +55,27 @@ range_t IRDistanceSensor :: GetOutputRange ( range_t Out )
 
 };
 
-void IRDistanceSensor :: CalibLowPoint ()
+void IRDistanceSensor :: CalibLowPoint ( double Intended )
 {
 
 	range_t CalRange = Attenuator -> GetRangeIn ();
+	range_t IntRange = Attenuator -> GetRangeOut ();
 	CalRange.Low = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
+	IntRange.Low = Intended;
 	Attenuator -> SetRangeIn ( CalRange );
+	Attenuator -> SetRangeOut ( CalRange );
 
 };
 
-void IRDistanceSensor :: CalibHighPoint ()
+void IRDistanceSensor :: CalibHighPoint ( double Intended )
 {
 
 	range_t CalRange = Attenuator -> GetRangeIn ();
-	CalRange.Low = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
+	range_t IntRange = Attenuator -> GetRangeOut ();
+	CalRange.High = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
+	IntRange.High = Intended;
 	Attenuator -> SetRangeIn ( CalRange );
+	Attenuator -> SetRangeOut ( CalRange );
 
 };
 
