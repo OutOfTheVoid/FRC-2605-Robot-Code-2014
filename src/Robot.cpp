@@ -5,6 +5,9 @@ Robot :: Robot ():
 	BeltConfig ()
 {
 
+	Log = Logger :: GetInstance ();
+	Log -> Log ( Logger :: LOG_EVENT, "** Robot Starting **\n" );
+
 	Mode = RobotStartMode;
 
 	DsLcd = DriverStationLCD :: GetInstance ();
@@ -19,10 +22,14 @@ Robot :: Robot ():
 	AutoCount = 0;
 	TeleCount = 0;
 
+	Log -> Log ( Logger :: LOG_EVENT, "** Robot Started **\n" );
+
 };
 
 void Robot :: InitVision ()
 {
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Initializing Vision\n" );
 
 	AutonomousTask = new Task ( "2605_Autonomous", (FUNCPTR) & Robot :: AutonomousTaskStub );
 	TeleopTask = new Task ( "2605_Teleop", (FUNCPTR) & Robot :: TeleopTaskStub );
@@ -35,6 +42,8 @@ void Robot :: InitVision ()
 void Robot :: InitSensors ()
 {
 
+	Log -> Log ( Logger :: LOG_EVENT, "Initializing Sensors\n" );
+
 	DistanceSensorAnalog = new AnalogChannel ( 1, 6 );
 	BallSensor = new IRDistanceSensor ( DistanceSensorAnalog );
 
@@ -44,6 +53,8 @@ void Robot :: InitSensors ()
 
 void Robot :: InitControls ()
 {
+
+	Log -> Log ( Logger :: LOG_EVENT, "Initializing Controls\n" );
 
 	printf ( "INIT CONTROLS\n" );
 
@@ -65,7 +76,7 @@ void Robot :: InitControls ()
 void Robot :: InitMotors ()
 {
 
-	printf ( "INIT MOTORS\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "Initializing Motors\n" );
 
 	// PICServo Controller
 
@@ -123,16 +134,11 @@ void Robot :: InitMotors ()
 
 	// ARMS/WINCH
 
-	printf ( "PICSERVO\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "Initializing PIC-Servos\n" );
 
 	PICServoControl -> AddPICServo ( 1, false, 3, 4 );
-	printf ( "# 1 Added!\n" );
-
 	PICServoControl -> AddPICServo ( 3, false, 4, 3 );
-	printf ( "# 3 Added!\n" );
-
 	PICServoControl -> AddPICServo ( 4, false, 9, 5 );
-	printf ( "# 4 Added!\n");
 
 	ArmL = PICServoControl -> GetModule ( 1 );
 
@@ -148,13 +154,9 @@ void Robot :: InitMotors ()
 	ArmR -> ConfigVelocity ( 0.4 );
 	ArmR -> ConfigAcceleration ( 0.02 );
 
-	printf ( "COLLECTORARMS\n" );
-
 	Arms = new CollectorArms ( ArmL, ArmR );
 
-	Arms -> SetInverted ( false, false );
-	Arms -> SetFreeDrivePower ( 0.3 );
-	Arms -> SetZeros ();
+	Arms -> SetInverted ( true, false );
 
 	// WINCH
 
@@ -172,7 +174,7 @@ void Robot :: InitMotors ()
 void Robot :: InitBehaviors ()
 {
 
-	printf ( "INIT BEHAVIORS\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "Initializing Behaviors\n" );
 
 	Behaviors = new BehaviorController ();
 
@@ -182,8 +184,12 @@ void Robot :: InitBehaviors ()
 	BALL_PICKUP_BEHAVIOR = "BallPickup";
 	BallPickup = new BallPickupBehavior ( Shooter, Arms, Drive, GearStepper, OnShiftDelegate, BallSensor, BallPositionSwitch );
 
+	AUTONOMOUS_START_BEHAVIOR = "AutonomousStart";
+	AutonomousStart = new AutonomousStartBehavior ( Arms );
+
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
+	Behaviors -> AddBehavior ( AUTONOMOUS_START_BEHAVIOR, AutonomousStart );
 
 };
 
@@ -307,10 +313,7 @@ void Robot :: AutonomousInit ()
 	VisionTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 	AutonomousTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
-	//LEDS -> Clear ();
-
-	ArmL -> SetControlMode ( PICServo :: kPWM );
-	ArmL -> Enable ();
+	Behaviors -> StartBehavior ( AUTONOMOUS_START_BEHAVIOR );
 
 };
 
@@ -319,25 +322,20 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	/*TestAnimation -> Update ();
-
-	if ( LEDS -> HasNewData () )
-		LEDS -> PushColors ();*/
+	Behaviors -> Update ();
+	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f", ArmL -> GetPosition () );
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	/*LEDS -> Clear ();
-	LEDS -> PushColors ();*/
-
-	ArmL -> Disable ();
+	Behaviors -> StopBehavior ( AUTONOMOUS_START_BEHAVIOR );
 
 	AutonomousTask -> Stop ();
 	VisionTask -> Stop ();
 
-	printf ( "================\n= Autonomous X =\n================\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
 };
 
@@ -355,7 +353,7 @@ void Robot :: AutonomousTaskRoutine ()
 void Robot :: TeleopInit ()
 {
 
-	printf ( "================\n=   Teleop !    =\n================\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );
 
 	DisabledEnd ();
 	Mode = TeleopMode;
@@ -398,9 +396,10 @@ void Robot :: TeleopPeriodic ()
 void Robot :: TeleopEnd ()
 {
 
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop X   =\n================\n" );
+
 	Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
-	printf ( "================\n=   Teleop X   =\n================\n" );
 	DsLcd -> UpdateLCD ();
 
 	TeleopTask -> Stop ();
@@ -431,7 +430,11 @@ void Robot :: TeleopTaskRoutine ()
 void Robot :: TestInit ()
 {
 
-	DisabledEnd ();
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=    Test !     =\n================\n" );
+
+	if ( Mode != TestMode )
+		DisabledEnd ();
+
 	Mode = TestMode;
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
@@ -452,6 +455,8 @@ void Robot :: TestInit ()
 		if ( StrafeStick -> GetRawButton ( 8 ) )
 		{
 
+			Log -> Log ( Logger :: LOG_EVENT, "Winch Calibration\n" );
+
 			TestPeriodMode = 1;
 
 			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE WENCH **" );
@@ -468,6 +473,8 @@ void Robot :: TestInit ()
 		if ( StrafeStick -> GetRawButton ( 11 ) )
 		{
 
+			Log -> Log ( Logger :: LOG_EVENT, "Ball Sensor Calibration\n" );
+
 			TestPeriodMode = 2;
 
 			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE BALL SENSE **" );
@@ -481,6 +488,8 @@ void Robot :: TestInit ()
 
 		if ( StrafeStick -> GetRawButton ( 10 ) )
 		{
+
+			Log -> Log ( Logger :: LOG_EVENT, "Ball Pickup\n" );
 
 			TestPeriodMode = 3;
 			
@@ -526,7 +535,7 @@ void Robot :: TestPeriodic ()
 			if ( StrafeStick -> GetRawButton ( 3 ) )
 			{
 
-				BallSensor -> CalibLowPoint ( 0.2 );
+				BallSensor -> CalibHighPoint ( 0.8 );
 
 				TestPeriodMode = 4;
 
@@ -551,7 +560,7 @@ void Robot :: TestPeriodic ()
 			if ( StrafeStick -> GetRawButton ( 2 ) )
 			{
 
-				BallSensor -> CalibHighPoint ( 0.8 );
+				BallSensor -> CalibLowPoint ( 0.2 );
 
 				TestInit ();
 
@@ -571,7 +580,7 @@ void Robot :: TestPeriodic ()
 void Robot :: TestEnd ()
 {
 
-	printf ( "================\n=    Test X    =\n================\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=    Test X    =\n================\n" );
 
 };
 
@@ -612,7 +621,7 @@ void Robot :: DisabledInit ()
 
 	Mode = DisabledMode;
 
-	printf ( "================\n=  Disabled !  =\n================\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=  Disabled !  =\n================\n" );
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Disabled\n" );
 	DsLcd -> UpdateLCD ();
@@ -629,7 +638,7 @@ void Robot :: DisabledPeriodic ()
 void Robot :: DisabledEnd ()
 {
 
-	printf ( "================\n=  Disabled X  =\n================\n" );
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=  Disabled X  =\n================\n" );
 
 };
 

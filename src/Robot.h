@@ -3,6 +3,8 @@
 
 #include "WPILib.h"
 
+#include "Logging/Logger.h"
+
 #include "CANJagServer/AsynchCANJaguar.h"
 #include "CANJagServer/CANJaguarServer.h"
 
@@ -31,6 +33,7 @@
 
 #include "BallPickupBehavior.h"
 #include "TeleopDriveBehavior.h"
+#include "AutonomousStartBehavior.h"
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
@@ -76,6 +79,8 @@
 #define ARM_SPEED_SCALE 100
 
 #define WENCH_SPEED_SCALE 100
+
+#define ROBOT_LOGLEVEL Logger :: LOG_DEBUG
 
 class Robot : public IterativeRobot
 {
@@ -225,9 +230,11 @@ private:
 
 	TeleopDriveBehavior * TeleopDrive;
 	BallPickupBehavior * BallPickup;
+	AutonomousStartBehavior * AutonomousStart;
 
 	char * TELEOP_DRIVE_BEHAVIOR;
 	char * BALL_PICKUP_BEHAVIOR;
+	char * AUTONOMOUS_START_BEHAVIOR;
 
 	// Ball stuff
 
@@ -237,6 +244,8 @@ private:
 	// TEST STUFF
 
 	uint8_t TestPeriodMode;
+
+	Logger * Log;
 
 };
 

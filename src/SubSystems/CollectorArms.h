@@ -50,11 +50,7 @@ private:
 
 	bool Enabled;
 
-	bool LastDrivePosition;
-
 	bool LInverted, RInverted;
-
-	bool LCalibrated, RCalibrated;
 
 };
 

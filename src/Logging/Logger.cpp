@@ -1,5 +1,7 @@
 #include "Logger.h"
 
+Logger * Logger :: Instance = NULL;
+
 Logger * Logger :: GetInstance ()
 {
 
@@ -18,7 +20,7 @@ Logger :: Logger ()
 	PrintSynchSemaphore = semMCreate ( SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE );
 
 	if ( PrintSynchSemaphore == NULL )
-		throw "Logger Error: Couldn't create print synch semaphore.";
+		Log ( LOG_ERROR, "Couldn't create print synch semaphore!\n" );
 
 };
 
@@ -44,10 +46,21 @@ void Logger :: Log ( LogLevel Level, const char * Format, ... )
 	if ( Level <= PrintLevel )
 	{
 
+		if ( Level == LOG_ERROR )
+			printf ( "ERROR: " );
+
 		va_list ArgList;
 		va_start ( ArgList, Format );
 		vprintf ( Format, ArgList );
 		va_end ( ArgList );
+
+		if ( Level == LOG_ERROR )
+		{
+
+			semGive ( PrintSynchSemaphore );
+			throw "(Logged Error)\n";
+		
+		}
 
 	}
 

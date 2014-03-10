@@ -35,8 +35,6 @@ bool CollectorArms :: Enable ()
 	ML -> Enable ();
 	MR -> Enable ();
 
-	LastDrivePosition = false;
-
 	ML -> SetControlMode ( PICServo :: kPWM );
 	MR -> SetControlMode ( PICServo :: kPWM );
 

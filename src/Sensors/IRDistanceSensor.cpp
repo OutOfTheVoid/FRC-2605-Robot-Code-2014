@@ -60,7 +60,7 @@ void IRDistanceSensor :: CalibLowPoint ( double Intended )
 
 	range_t CalRange = Attenuator -> GetRangeIn ();
 	range_t IntRange = Attenuator -> GetRangeOut ();
-	CalRange.Low = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
+	CalRange.High = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
 	IntRange.Low = Intended;
 	Attenuator -> SetRangeIn ( CalRange );
 	Attenuator -> SetRangeOut ( CalRange );
@@ -72,7 +72,7 @@ void IRDistanceSensor :: CalibHighPoint ( double Intended )
 
 	range_t CalRange = Attenuator -> GetRangeIn ();
 	range_t IntRange = Attenuator -> GetRangeOut ();
-	CalRange.High = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
+	CalRange.Low = ( UseAverage ? Channel -> GetAverageVoltage () : Channel -> GetVoltage () );
 	IntRange.High = Intended;
 	Attenuator -> SetRangeIn ( CalRange );
 	Attenuator -> SetRangeOut ( CalRange );
