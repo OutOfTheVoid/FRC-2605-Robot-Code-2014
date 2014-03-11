@@ -47,7 +47,10 @@ void Logger :: Log ( LogLevel Level, const char * Format, ... )
 	{
 
 		if ( Level == LOG_ERROR )
-			printf ( "ERROR: " );
+			printf ( "* ERROR: " );
+
+		if ( Level == LOG_WARNING )
+			printf ( "* WARNING: " );
 
 		va_list ArgList;
 		va_start ( ArgList, Format );

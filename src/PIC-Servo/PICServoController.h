@@ -7,6 +7,8 @@
 
 #include "WPILib.h"
 
+#include "src/Logging/Logger.h"
+
 #define PICSERVO_CONTROL_TASK_PRIORITY 50
 #define PICSERVO_CONTROL_TASK_STACKSIZE 0x20000
 #define MAXIMUM_UPDATE_DELTA_TIME 0.001
@@ -183,6 +185,8 @@ private:
 	Task * ServerTask;
 
 	bool Started;
+
+	Logger * Log;
 
 	static int _StartServerTask ( PICServoController * This );
 

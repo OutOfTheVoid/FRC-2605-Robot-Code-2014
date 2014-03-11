@@ -17,7 +17,9 @@ public:
 		LOG_PROBLEM = 2,
 		LOG_WARNING = 3,
 		LOG_EVENT = 4,
-		LOG_DEBUG = 5
+		LOG_DEBUG = 5,
+		LOG_DEBUG2 = 6,
+		LOG_DEBUG3 = 7,
 
 	} LogLevel;
 

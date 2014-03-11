@@ -42,8 +42,6 @@ void AutonomousStartBehavior :: Stop ()
 void AutonomousStartBehavior :: Restart ()
 {
 
-	Arms -> SetZeros ();
-
 };
 
 void AutonomousStartBehavior :: Update ()

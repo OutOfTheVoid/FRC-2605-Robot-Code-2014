@@ -6,6 +6,8 @@ Robot :: Robot ():
 {
 
 	Log = Logger :: GetInstance ();
+	Log -> SetPrintLevel ( Logger :: LOG_DEBUG3 );
+
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Starting **\n" );
 
 	Mode = RobotStartMode;
@@ -137,26 +139,26 @@ void Robot :: InitMotors ()
 	Log -> Log ( Logger :: LOG_EVENT, "Initializing PIC-Servos\n" );
 
 	PICServoControl -> AddPICServo ( 1, false, 3, 4 );
-	PICServoControl -> AddPICServo ( 3, false, 4, 3 );
+	PICServoControl -> AddPICServo ( 2, false, 4, 3 );
 	PICServoControl -> AddPICServo ( 4, false, 9, 5 );
 
 	ArmL = PICServoControl -> GetModule ( 1 );
 
 	ArmL -> SetEncoderResolution ( 360 * 4 );
-	ArmL -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
-	ArmL -> ConfigVelocity ( 0.4 );
-	ArmL -> ConfigAcceleration ( 0.02 );
+	ArmL -> SetPID ( 0.35, 0.0, 0.0, 0.4 );
+	ArmL -> ConfigVelocity ( 0.04 );
+	ArmL -> ConfigAcceleration ( 0.002 );
 
-	ArmR = PICServoControl -> GetModule ( 3 );
+	ArmR = PICServoControl -> GetModule ( 2 );
 
 	ArmR -> SetEncoderResolution ( 360 * 4 );
-	ArmR -> SetPID ( 0.35, 0.0, 0.2, 0.62745 );
-	ArmR -> ConfigVelocity ( 0.4 );
-	ArmR -> ConfigAcceleration ( 0.02 );
+	ArmR -> SetPID ( 0.35, 0.0, 0.0, 0.4 );
+	ArmR -> ConfigVelocity ( 0.04 );
+	ArmR -> ConfigAcceleration ( 0.002 );
 
 	Arms = new CollectorArms ( ArmL, ArmR );
 
-	Arms -> SetInverted ( true, false );
+	Arms -> SetInverted ( false, false );
 
 	// WINCH
 
@@ -305,15 +307,26 @@ void Robot :: AutonomousInit ()
 	DisabledEnd ();
 	Mode = AutonomousMode;
 
+	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous ! =\n================\n" );
+
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Autonomous" );
 	DsLcd -> UpdateLCD ();
 
 	TargetFound = false;
 
+	/*Log -> Log ( Logger :: LOG_DEBUG, "Starting auto tasks...\n" );
+
 	VisionTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 	AutonomousTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
+	Log -> Log ( Logger :: LOG_DEBUG, "Starting behaviors...\n" );
+
 	Behaviors -> StartBehavior ( AUTONOMOUS_START_BEHAVIOR );
+
+	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );*/
+
+	Arms -> Enable ();
+	Arms -> SetZeros ();
 
 };
 
@@ -322,18 +335,23 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	Behaviors -> Update ();
-	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f", ArmL -> GetPosition () );
+	/*Behaviors -> Update ();*/
+	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f\n", ArmL -> GetPosition () );
+
+	ArmL -> SetControlMode ( PICServo :: kPosition );
+	ArmL -> Set ( 0.67014 );
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	Behaviors -> StopBehavior ( AUTONOMOUS_START_BEHAVIOR );
+	Arms -> Disable ();
+
+	/*Behaviors -> StopBehavior ( AUTONOMOUS_START_BEHAVIOR );
 
 	AutonomousTask -> Stop ();
-	VisionTask -> Stop ();
+	VisionTask -> Stop ();*/
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
@@ -353,10 +371,10 @@ void Robot :: AutonomousTaskRoutine ()
 void Robot :: TeleopInit ()
 {
 
-	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );
-
 	DisabledEnd ();
 	Mode = TeleopMode;
+
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
 	
@@ -430,10 +448,10 @@ void Robot :: TeleopTaskRoutine ()
 void Robot :: TestInit ()
 {
 
-	Log -> Log ( Logger :: LOG_EVENT, "================\n=    Test !     =\n================\n" );
-
 	if ( Mode != TestMode )
 		DisabledEnd ();
+
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=    Test !     =\n================\n" );
 
 	Mode = TestMode;
 
@@ -443,6 +461,10 @@ void Robot :: TestInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "11: Cal. Ball Sensor" );
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "10: Pickup Ball" );
 	DsLcd -> UpdateLCD ();
+
+	WinchM -> CalibrateAnalog ();
+	ArmL -> CalibrateAnalog ();
+	ArmR -> CalibrateAnalog ();
 
 	ArmL -> ResetPosition ();
 	ArmR -> ResetPosition ();
@@ -631,7 +653,7 @@ void Robot :: DisabledInit ()
 void Robot :: DisabledPeriodic ()
 {
 
-	Arms -> CalibratePICServoAnalogs ();
+	//Arms -> CalibratePICServoAnalogs ();
 
 };
 

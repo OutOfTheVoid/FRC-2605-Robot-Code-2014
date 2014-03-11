@@ -31,8 +31,8 @@ void TeleopDriveBehavior :: Start ()
 	if ( ! Drive -> GetEnabled () )
 		Drive -> Enable ();
 
-	if ( ! Arms -> GetEnabled () )
-		Arms -> Enable ();
+	//if ( ! Arms -> GetEnabled () )
+	//	Arms -> Enable ();
 
 	Gear -> Set ( 1 );
 	OnShift -> Call ();

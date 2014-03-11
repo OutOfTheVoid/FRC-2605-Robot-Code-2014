@@ -3,6 +3,8 @@
 
 #include "src/Drivers/SerialDriver.h"
 
+#include "src/Logging/Logger.h"
+
 #define PICSERVO_BAUD_RATE_INITIAL 19200
 
 #define	PICSERVO_COMMAND_RESET_POS	  0x00	//Reset encoder counter to 0 (0 bytes)
@@ -75,7 +77,7 @@ public:
 	void ModuleSetAddress ( uint8_t Module, uint8_t NewAddress, uint8_t NewGroupAddress );
 	void ModuleDefineStatus ( uint8_t Module, uint8_t Type = 0 );
 	void ModuleReadStatus ( uint8_t Module, uint8_t Type, PICServoStatus_t * Status );
-	void ModuleStopMotor ( uint8_t Module, bool AmplifierEnabled, bool MotorOff = true, bool Abruptly = true );
+	void ModuleStopMotor ( uint8_t Module, bool AmplifierEnabled = false, bool MotorOff = true, bool Abruptly = false );
 	void ModuleSetMetrics ( uint8_t Module, uint16_t P, uint16_t I, uint16_t D, uint16_t IntegrationLimit = 32767, uint8_t OutputLimit = 0xFF, int8_t CurrentLimit = 127, uint16_t PositionErrorLimit = 32767, uint8_t ServoRateDevisor = 1, uint8_t AmplifierDeadbandCompensation = 0, uint8_t StepRateMultiplier = 1 );
 	void ModuleIOControl ( uint8_t Module, bool LimitSwitches, bool LimitAbruptly, bool ThreePhaseCom = false, bool AntiphasePWM = true, bool FastPath = false, bool StepAndDirection = false );
 	void ModuleClearStatus ( uint8_t Module );
@@ -99,6 +101,8 @@ private:
 	bool ReceiveMessage ( uint8_t * Buffer, uint32_t Count );
 
 	SerialDriver * Com;
+
+	Logger * Log;
 
 	SEM_ID SerialLock;
 

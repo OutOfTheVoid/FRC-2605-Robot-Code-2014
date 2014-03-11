@@ -13,9 +13,6 @@ CollectorArms :: CollectorArms ( PICServo * ML, PICServo * MR )
 
 	Enabled = false;
 
-	LCalibrated = false;
-	RCalibrated = false;
-
 	FreePWM = 1.0;
 
 };

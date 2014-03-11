@@ -3,6 +3,8 @@
 PICServoController :: PICServoController ( uint8_t GroupAddress )
 {
 
+	Log = Logger :: GetInstance ();
+
 	PipeServer = new AnalogCANJaguarPipeServer ();
 	PipeServer -> Start ();
 
@@ -20,7 +22,7 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 	SendMessageQueue = msgQCreate ( 200, sizeof ( ServerMessage * ), MSG_Q_FIFO );
 
 	if ( SendMessageQueue == NULL )
-		throw "PICServoController Error: Couldn't allocate a message queue for asynch command loop.";
+		Log -> Log ( Logger :: LOG_ERROR, "PICServoController Error: Couldn't allocate a message queue for asynch command loop." );
 
 	ReceiveMessageQueue = msgQCreate ( 20, sizeof ( ServerMessage * ), MSG_Q_FIFO );
 
@@ -29,7 +31,7 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 
 		msgQDelete ( SendMessageQueue );
 
-		throw "PICServoController Error: Couldn't allocate a message queue for asynch command loop.";
+		Log -> Log ( Logger :: LOG_ERROR, "PICServoController Error: Couldn't allocate a message queue for asynch command loop." );
 
 	}
 
@@ -41,7 +43,7 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 		msgQDelete ( SendMessageQueue );
 		msgQDelete ( ReceiveMessageQueue );
 
-		throw "PICServoController Error: Couldn't create Response synchronization semaphore.";
+		Log -> Log ( Logger :: LOG_ERROR, "PICServoController Error: Couldn't create Response synchronization semaphore." );
 
 	};
 
@@ -54,7 +56,7 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 		msgQDelete ( ReceiveMessageQueue );
 		semDelete ( ResponseSemaphore );
 
-		throw "PICServoController Error: Couldn't create Module synchronization semaphore.";
+		Log -> Log ( Logger :: LOG_ERROR, "PICServoController Error: Couldn't create Module synchronization semaphore." );
 
 	}
 
@@ -66,7 +68,7 @@ PICServoController :: PICServoController ( uint8_t GroupAddress )
 		semDelete ( ResponseSemaphore );
 		semDelete ( ModuleSemaphore );
 
-		throw "PICServoController Error: Couldn't start server task.";
+		Log -> Log ( Logger :: LOG_ERROR, "PICServoController Error: Couldn't start server task." );
 
 	}
 
@@ -129,9 +131,13 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 		SendMessage -> Command = PICSERVO_REINIT_MESSAGE;
 		SendMessage -> Data = ModuleNumber;
 
-		msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+		if ( msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT ) )
+			Log -> Log ( Logger :: LOG_ERROR, "msgQSend Failed in AddPICServo!\n" );
 
-		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+		if ( msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER ) )
+			Log -> Log ( Logger :: LOG_ERROR, "msgQReceive Failed in AddPICServo!\n" );
+
+		Log -> Log ( Logger :: LOG_EVENT, "PICServo #%i Added Successfully.\n", ModuleNumber );
 
 		delete ResponseMessage;
 
@@ -151,9 +157,12 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 			SendMessage -> Command = PICSERVO_INIT_MESSAGE;
 			SendMessage -> Data = ModuleNumber;
 
-			msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+			if ( msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT ) )
+				Log -> Log ( Logger :: LOG_ERROR, "msgQSend Failed in AddPICServo!\n" );
 
-			msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
+			if ( msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER ) )
+				Log -> Log ( Logger :: LOG_ERROR, "msgQReceive Failed in AddPICServo!\n" );
+
 
 			delete ResponseMessage;
 			ResponseMessage = NULL;
@@ -165,16 +174,13 @@ void PICServoController :: AddPICServo ( uint8_t ModuleNumber, bool Initialize, 
 		SendMessage -> Command = PICSERVO_REINIT_MESSAGE;
 		SendMessage -> Data = ModuleNumber;
 
-		printf ( "Sending message...\n" );
-
 		if ( msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT ) == ERROR )
-			printf ( "Error!\n" );
+			Log -> Log ( Logger :: LOG_ERROR, "msgQSend Failed in AddPICServo!\n" );
 
-		printf ( "Receiving message...\n" );
+		if ( msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER ) == ERROR )
+			Log -> Log ( Logger :: LOG_ERROR, "msgQReceive Failed in AddPICServo!\n" );
 
-		msgQReceive ( ReceiveMessageQueue, reinterpret_cast <char *> ( & ResponseMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER );
-
-		printf ( "!!!\n" );
+		Log -> Log ( Logger :: LOG_EVENT, "PICServo #%i Added Successfully.\n", ModuleNumber );
 
 		delete ResponseMessage;
 
@@ -203,11 +209,7 @@ void PICServoController :: PICServoEnable ( uint8_t ModuleNumber )
 	SendMessage -> Command = PICSERVO_ENABLE_MESSAGE;
 	SendMessage -> Data = ModuleNumber;
 
-	printf ( "Sending Enable Message...\n" );
-
 	msgQSend ( SendMessageQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( ServerMessage * ), WAIT_FOREVER, MSG_PRI_NORMAL );
-
-	printf ( "Enable sent...\n" );
 
 };
 
@@ -649,6 +651,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_DISABLE_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG, "PICSERVO_DISABLE\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				Module = Modules [ Message -> Data ];
@@ -662,6 +666,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_ENABLE_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG, "PICSERVO_ENABLE\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				Module = Modules [ Message -> Data ];
@@ -674,6 +680,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_SETPWM_MESSAGE:
+
+				Log -> Log ( Logger :: LOG_DEBUG, "PICSERVO_SETPWM\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -785,6 +793,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_RESETPOSITION_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG, "RESETPOSITION\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				Module = Modules [ Message -> Data ];
@@ -890,6 +900,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_SETPID_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG, "SETPID\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				SetPIDMessage * SPIDMessage = reinterpret_cast <SetPIDMessage *> ( Message -> Data );
@@ -914,13 +926,9 @@ void PICServoController :: RunLoop ()
 
 				Module = Modules [ Message -> Data ];
 
-				printf ( "Setting up status type...\n" );
-
 				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleDefineStatus ( Message -> Data, Module -> StatusType );
 				Com -> ReceiveStatusPacket ();
-
-				printf ( "Setting Addresss...\n" );
 
 				Com -> ModuleSetAddress ( 0, Message -> Data, GroupAddress );
 				Com -> ReceiveStatusPacket ();
@@ -928,8 +936,6 @@ void PICServoController :: RunLoop ()
 
 				Com -> ModuleClearStatus ( Message -> Data );
 				Com -> ReceiveStatusPacket ();
-
-				printf ( "Stopping Motor...\n" );
 
 				Com -> ModuleStopMotor ( Message -> Data, false, true, true );
 				Com -> ReceiveStatusPacket ();
@@ -952,20 +958,24 @@ void PICServoController :: RunLoop ()
 
 				Module = Modules [ Message -> Data ];
 
-				printf ( "Setting up status type...\n" );
+				Log -> Log ( Logger :: LOG_DEBUG, "Defining module status...\n" );
 
-				Com -> ModuleDefineStatus ( Message -> Data, Module -> StatusType );
 				Com -> SetStatusType ( Module -> StatusType );
+				Com -> ModuleDefineStatus ( Message -> Data, Module -> StatusType );
 				Com -> ReceiveStatusPacket ();
+
+				Log -> Log ( Logger :: LOG_DEBUG, "Clearing module status...\n" );
 
 				Com -> ModuleClearStatus ( Message -> Data );
 				Com -> ReceiveStatusPacket ();
 
-				printf ( "Stopping Motor...\n" );
+				Log -> Log ( Logger :: LOG_DEBUG, "Stopping module motor...\n" );
 
 				Com -> ModuleStopMotor ( Message -> Data, false, true, true );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
+
+				Log -> Log ( Logger :: LOG_DEBUG, "Finished reinitializing module.\n" );
 
 				Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
 

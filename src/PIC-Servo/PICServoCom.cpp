@@ -3,6 +3,8 @@
 PICServoCom :: PICServoCom ()
 {
 
+	Log = Logger :: GetInstance ();
+
 	Com = new SerialDriver ( 19200 );
 	Com -> SetFlowControl ( SerialDriver :: FlowControl_None );
 	Com -> SetTimeout ( 1.0 );
@@ -279,7 +281,7 @@ void PICServoCom :: ModuleStopMotor ( uint8_t Module, bool AmplifierEnabled, boo
 
 	uint8_t Value = AmplifierEnabled ? 0x01 : 0x00;
 	Value |= MotorOff ? 0x02 : 0x00;
-	Value |= Abruptly ? 0x04 : 0x08;
+	Value |= Abruptly ? 0x04 : 0x80;
 
 	uint8_t Data [ 1 ] = { Value };
 
@@ -548,7 +550,7 @@ void PICServoCom :: GetStatus ( PICServoStatus_t * Status )
 	}
 
 	if ( StatusBytes [ Counter ] != CheckSum )
-		printf ( "Checksum Error!\n" );
+		Log -> Log ( Logger :: LOG_WARNING, "Checksum Mismatch!\n" );
 
 };
 
@@ -587,6 +589,13 @@ void PICServoCom :: SendMessage ( uint8_t Address, uint8_t Command, uint8_t * Da
 
 	DataBuffer [ 3 + DataSize ] = CheckSum;
 
+	Log -> Log ( Logger :: LOG_DEBUG3, "SendMessage [" );
+
+	for ( uint8_t u = 0; u < DataSize + 4; u ++ )
+		Log -> Log ( Logger :: LOG_DEBUG3, " 0x%x", DataBuffer [ u ] );
+
+	Log -> Log ( Logger :: LOG_DEBUG3, " ]\n" );
+
 	Com -> Write ( DataBuffer, 4 + DataSize );
 
 	Com -> FlushWriteBuffer ();
@@ -599,6 +608,13 @@ bool PICServoCom :: ReceiveMessage ( uint8_t * Buffer, uint32_t Count )
 
 	if ( Com -> Read ( Buffer, Count ) == Count )
 	{
+
+		Log -> Log ( Logger :: LOG_DEBUG3, "ReceiveMessage [" );
+
+		for ( uint8_t u = 0; u < Count; u ++ )
+			Log -> Log ( Logger :: LOG_DEBUG3, " 0x%x", Buffer [ u ] );
+
+		Log -> Log ( Logger :: LOG_DEBUG3, " ]\n" );
 
 		Com -> FlushReadBuffer ();
 		Com -> FlushDeviceRead ();
