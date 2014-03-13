@@ -94,6 +94,7 @@ public:
 	void InitBehaviors ();
 	void InitVision ();
 	void InitSensors ();
+	void InitDecorations ();
 
 	void DisabledInit ();
 	void DisabledPeriodic ();
@@ -142,6 +143,7 @@ private:
 	uint32_t TeleCount;
 	uint32_t AutoCount;
 	uint32_t TestCount;
+	uint32_t DisbCount;
 
 	// Driver station readout
 	
@@ -220,7 +222,7 @@ private:
 
 	// LED STUFF
 
-	LEDStrip * LEDS;
+	LEDStrip * LEDs;
 
 	LEDStripAnimator * TestAnimation;
 

@@ -21,6 +21,8 @@ PICServo :: PICServo ( uint8_t ModuleAddress, PICServoController * Controller, A
 
 	this -> Enabled = false;
 
+	LastSetValue = - 1000000000000000000.0;
+
 };
 
 PICServo :: ~PICServo ()
@@ -32,6 +34,8 @@ void PICServo :: SetControlMode ( PICServoControlMode ControlMode )
 
 	this -> ControlMode = ControlMode;
 
+	LastSetValue = - 1000000000000000000.0;
+
 };
 
 PICServo :: PICServoControlMode PICServo :: GetControlMode ()
@@ -40,6 +44,13 @@ PICServo :: PICServoControlMode PICServo :: GetControlMode ()
 	return ControlMode;
 
 };
+
+void PICServo :: SetHardwearLimitingEnabled ( bool Enabled )
+{
+
+	Controller -> PICServoSetLimiting ( ModuleNumber, Enabled );
+
+}
 
 void PICServo :: SetEncoderResolution ( uint32_t EncoderCountsPerRev )
 {
@@ -55,9 +66,6 @@ void PICServo :: Enable ()
 {
 
 	Controller -> PICServoEnable ( ModuleNumber );
-
-	if ( ControlMode == kPosition )
-		ResetPosition ();
 
 	Enabled = true;
 
@@ -116,6 +124,7 @@ void PICServo :: ConfigVelocity ( double Velocity )
 		this -> Velocity = Velocity;
 
 		NewVelocity = true;
+		LastSetValue = - 1000000000000000000.0;
 
 	}
 
@@ -130,6 +139,7 @@ void PICServo :: ConfigAcceleration ( double Acceleration )
 		this -> Acceleration = Acceleration;
 
 		NewAcceleration = true;
+		LastSetValue = - 1000000000000000000.0;
 
 	}
 
@@ -138,60 +148,67 @@ void PICServo :: ConfigAcceleration ( double Acceleration )
 void PICServo :: Set ( double Value )
 {
 
-	switch ( ControlMode )
+	if ( LastSetValue != Value )
 	{
-			
-	case kPWM:
 
-		Controller -> PICServoSetPWM ( ModuleNumber, static_cast <int16_t> ( Value * 0xFF ) );
+		LastSetValue = Value;
 
-		break;
-
-	case kPosition:
-
-		Value *= static_cast <double> ( EncoderCount );
-
-		if ( NewVelocity )
+		switch ( ControlMode )
 		{
+				
+		case kPWM:
 
-			if ( NewAcceleration )
-				Controller -> PICServoSetPositionVA ( ModuleNumber, Value, Velocity, Acceleration );
-			else
-				Controller -> PICServoSetPositionV ( ModuleNumber, Value, Velocity );
-
-		}
-		else
-		{
-
-			if ( NewAcceleration )
-				Controller -> PICServoSetPositionA ( ModuleNumber, Value, Acceleration );
-			else
-				Controller -> PICServoSetPosition ( ModuleNumber, Value );
-
-		}
-
-		NewAcceleration = false;
-		NewVelocity = false;
-
-		break;
-
-	case kVelocity:
-
-		Value *= static_cast <double> ( EncoderCount );
-		Value /= PICSERVO_SERVO_RATE;
-
-		if ( NewAcceleration )
-			Controller -> PICServoSetVelocityA ( ModuleNumber, Value, Acceleration );
-		else
-			Controller -> PICServoSetVelocity ( ModuleNumber, Value );
+			Controller -> PICServoSetPWM ( ModuleNumber, static_cast <int16_t> ( Value * 0xFF ) );
 
 			break;
 
-	default:
+		case kPosition:
 
-		Controller -> PICServoSetPWM ( ModuleNumber, 0 );
+			Value *= static_cast <double> ( EncoderCount );
 
-		break;
+			if ( NewVelocity )
+			{
+
+				if ( NewAcceleration )
+					Controller -> PICServoSetPositionVA ( ModuleNumber, Value, Velocity, Acceleration );
+				else
+					Controller -> PICServoSetPositionV ( ModuleNumber, Value, Velocity );
+
+			}
+			else
+			{
+
+				if ( NewAcceleration )
+					Controller -> PICServoSetPositionA ( ModuleNumber, Value, Acceleration );
+				else
+					Controller -> PICServoSetPosition ( ModuleNumber, Value );
+
+			}
+
+			NewAcceleration = false;
+			NewVelocity = false;
+
+			break;
+
+		case kVelocity:
+
+			Value *= static_cast <double> ( EncoderCount );
+			Value /= PICSERVO_SERVO_RATE;
+
+			if ( NewAcceleration )
+				Controller -> PICServoSetVelocityA ( ModuleNumber, Value, Acceleration );
+			else
+				Controller -> PICServoSetVelocity ( ModuleNumber, Value );
+
+				break;
+
+		default:
+
+			Controller -> PICServoSetPWM ( ModuleNumber, 0 );
+
+			break;
+		
+		}
 
 	}
 
@@ -203,6 +220,8 @@ void PICServo :: ResetPosition ()
 {
 
 	Controller -> PICServoResetPosition ( ModuleNumber );
+
+	LastSetValue = - 1000000000000000000.0;
 
 };
 

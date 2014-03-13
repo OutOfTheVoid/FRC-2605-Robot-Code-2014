@@ -1,50 +1,46 @@
 #include "LEDStrip.h"
 
-LEDStrip :: LEDStrip ( uint32_t ClockPin, uint32_t MOSIPin, uint32_t MISOPin, uint32_t NumLEDS )
+LEDStrip :: LEDStrip ( uint32_t ClockPin, uint32_t MOSIPin, uint32_t NumLEDS )
 {
 
 	printf ( "LEDStrip: Creating Digitial IO\n" );
 
 	this -> ClockPin = new DigitalOutput ( ClockPin );
 	this -> MOSIPin = new DigitalOutput ( MOSIPin );
-	this -> MISOPin = new DigitalInput ( MISOPin );
 
 	printf ( "LEDStrip: Setting up SPI\n" );
 
-	Com = new SPI ( this -> ClockPin, this -> MOSIPin, this -> MISOPin );
+	Com = new SPI ( this -> ClockPin, this -> MOSIPin );
 	Com -> SetBitsPerWord ( 8 );
 	Com -> SetMSBFirst ();
+	Com -> SetClockActiveLow ();
+	Com -> ApplyConfig ();
 
 	printf ( "LEDStrip: Calculating buffer stuff\n" );
 
-	StripLength = NumLEDS;
-	LatchBytes = ( StripLength + 31 ) / 32;
-	BufferSize = StripLength * 3 + LatchBytes;
-
-	printf ( "LEDStrip: Writing initial clear message\n" );
-
-	for ( uint32_t i = ( ( StripLength + 31 ) / 32 ) - 1; i > 0; i ++ )
-		Com -> Write ( 0 );
-
-	printf ( "LEDStrip: Creating buffer\n" );
-
+	BufferSize = 4 + ( 2 * NumLEDS ) + ( NumLEDS / 8 ) + 1;
 	DataBuffer = new uint8_t [ BufferSize ];
 
-	printf ( "LEDStrip: Clearing buffer\n" );
+	memset ( DataBuffer, 0x00, BufferSize );
 
-	memset ( DataBuffer, 0x80, BufferSize );
-	memset ( & DataBuffer [ StripLength * 3 ], 0x00, LatchBytes );
+	Clear ( 0x000000 );
+	PushColors ();
 
 	NewData = false;
 
 	AccessSemaphore = semMCreate ( SEM_Q_PRIORITY | SEM_DELETE_SAFE | SEM_INVERSION_SAFE );
+	semGive ( AccessSemaphore );
+
+	printf ( "LEDStrip: Done!\n" );
 
 };
 
 LEDStrip :: ~LEDStrip ()
 {
 
- 	// TODO: Destruct everything. EVERYTHING.
+	semDelete ( AccessSemaphore );
+
+ 	delete DataBuffer;
 
 };
 
@@ -62,37 +58,29 @@ void LEDStrip :: SetPixelColor ( uint32_t Pixel, uint32_t Color )
 	if ( Pixel >= StripLength )
 		return;
 
-	semTake ( AccessSemaphore, WAIT_FOREVER );
+	//semTake ( AccessSemaphore, WAIT_FOREVER );
 
-	uint8_t R = ( Color & 0x7F0000 ) >> 16;
-	uint8_t G = ( Color & 0x7F00 ) >> 8;
-	uint8_t B = Color & 0x7F;
-
-	R |= 0x80;
-	G |= 0x80;
-	B |= 0x80;
-
-	DataBuffer [ Pixel * 3 ] = G;
-	DataBuffer [ Pixel * 3 + 1 ] = R;
-	DataBuffer [ Pixel * 3 + 2 ] = B;
+	uint16_t D = ( ( Color & 0xF80000 ) >> 9 ) | ( ( Color & 0xF800 ) >> 6 ) | ( ( Color & 0xF8 ) >> 3 ) | 0x8000;
+	DataBuffer [ Pixel * 2 + 4 ] = D >> 8;
+	DataBuffer [ Pixel * 2 + 5 ] = D;
 
 	NewData = true;
 
-	semGive ( AccessSemaphore );
+	//semGive ( AccessSemaphore );
 
 };
 
 void LEDStrip :: PushColors ()
 {
 
-	semTake ( AccessSemaphore, WAIT_FOREVER );
+	//semTake ( AccessSemaphore, WAIT_FOREVER );
 
 	for ( uint32_t i = 0; i < BufferSize; i ++ )
 		Com -> Write ( DataBuffer [ i ] );
 
 	NewData = false;
 
-	semGive ( AccessSemaphore );
+	//semGive ( AccessSemaphore );
 
 };
 

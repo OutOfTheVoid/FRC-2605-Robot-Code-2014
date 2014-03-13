@@ -3,6 +3,8 @@
 
 #include "src/PIC-Servo/PICServo.h"
 
+#include <cmath>
+
 class ShooterWinch
 {
 public:
@@ -15,7 +17,10 @@ public:
 	bool GetEnabled ();
 
 	void SetInverted ( bool Inverted );
-	void SetPreScale ( double Scale );
+
+	void SetZero ();
+
+	bool WithinAngle ( double Threshold, double Angle );
 
 	bool DriveAngle ( double Angle );
 	void DrivePWM ( double Value );
@@ -28,11 +33,7 @@ private:
 
 	PICServo * M;
 
-	double PreScale;
-
 	bool Enabled;
-
-	bool PreviousAllowSlop;
 
 };
 

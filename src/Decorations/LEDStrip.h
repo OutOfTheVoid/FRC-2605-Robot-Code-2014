@@ -7,7 +7,7 @@ class LEDStrip
 {
 public:
 
-	LEDStrip ( uint32_t ClockPin, uint32_t MOSIPin, uint32_t MISOPin, uint32_t NumLEDS );
+	LEDStrip ( uint32_t ClockPin, uint32_t MOSIPin, uint32_t NumLEDS );
 	~LEDStrip ();
 
 	void Clear ( uint32_t Color = 0x000000 );
@@ -26,7 +26,6 @@ private:
 
 	DigitalOutput * ClockPin;
 	DigitalOutput * MOSIPin;
-	DigitalInput * MISOPin;
 
 	uint32_t StripLength;
 	uint32_t LatchBytes;

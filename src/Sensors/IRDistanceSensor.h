@@ -51,7 +51,8 @@ private:
 	double OffLow;
 	double InLow;
 
-	MapFilter * Attenuator;
+	MapFilter * InAttenuator;
+	MapFilter * OutAttenuator;
 
 };
 

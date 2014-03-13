@@ -50,10 +50,61 @@ void BallPickupBehavior :: Update ()
 	{
 
 	case STATE_START:
+
+		Drive -> SetTranslation ( 0, DRIVE_BACK_SPEED );
+		Drive -> SetRotation ( 0 );
+		Drive -> PushTransform ();
+
+		Belts -> SetSpeed ( SPEED_COLLECT );
+		Belts -> PushSpeeds ();
+
+		State = STATE_DRIVE_BACK;
+
+		break;
+
+	case STATE_DRIVE_BACK:
+
+		if ( BallSensor -> Get () <= BALL_THRESHOLD )
+		{
+
+			State = STATE_CLAMPING;
+
+		}
+
+		break;
+
+	case STATE_CLAMPING:
+
+		Arms -> DrivePositions ( ARM_LEFT_CLOSE, ARM_RIGHT_CLOSE );
+
+		if ( BallLimit -> Get () )
+		{
+
+			State = STATE_HAVE_BALL;
+
+		}
+
+		break;
+
+	case STATE_HAVE_BALL:
+
+		Belts -> SetSpeed ( 0 );
+		Belts -> PushSpeeds ();
+
+		Drive -> SetTranslation ( 0, 0 );
+		Drive -> PushTransform ();
+
 	default:
 		break;
 
 	}
+
+};
+
+bool BallPickupBehavior :: IsDone ()
+{
+
+	return State == STATE_HAVE_BALL;
 
 };
 

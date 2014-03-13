@@ -5,6 +5,7 @@
 
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/CollectorArms.h"
+#include "SubSystems/ShooterBelts.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -17,11 +18,14 @@
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
+#define ARM_LEFT_OUT - 0.93611
+#define ARM_RIGHT_OUT 1.16875
+
 class TeleopDriveBehavior : public Behavior
 {
 public:
 
-	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, CollectorArms * ArmSystem );
+	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, CollectorArms * ArmSystem, ShooterBelts * Belts );
 	~TeleopDriveBehavior ();
 
 	void Start ();
@@ -29,10 +33,13 @@ public:
 	void Stop ();
 	void Restart ();
 
+	bool DoPickup ();
+
 private:
 
 	void ControlDrive ();
 	void ControlArms ();
+	void ControlBelts ();
 
 	// Drive
 
@@ -50,6 +57,12 @@ private:
 	// Arms
 
 	CollectorArms * Arms;
+
+	// Belts
+
+	ShooterBelts * Belts;
+
+	bool Pickup;
 
 };
 

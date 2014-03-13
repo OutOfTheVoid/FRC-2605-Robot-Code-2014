@@ -105,6 +105,8 @@ void LEDStripAnimator :: SetFrame ( uint32_t FrameIndex, uint32_t * PixelColors,
 	while ( MaxPixel < StopSections -> GetLength () )
 		StopSections -> Push ( 0 );
 
+	CurrentFrame = 0;
+
 };
 
 void LEDStripAnimator :: SetClearedLEDS ( uint32_t Offset, uint32_t PixelCount, bool Cleared )
@@ -160,6 +162,20 @@ void LEDStripAnimator :: WaitTillNextFrame ()
 
 	if ( TimeLeft > 0 )
 		Wait ( TimeLeft );
+
+};
+
+void LEDStripAnimator :: Start ()
+{
+
+	Running = true;
+
+};
+
+void LEDStripAnimator :: Stop ()
+{
+
+	Running = false;
 
 };
 

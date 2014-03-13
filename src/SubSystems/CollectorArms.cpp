@@ -15,6 +15,8 @@ CollectorArms :: CollectorArms ( PICServo * ML, PICServo * MR )
 
 	FreePWM = 1.0;
 
+	Log = Logger :: GetInstance ();
+
 };
 
 CollectorArms :: ~CollectorArms ()
@@ -34,6 +36,9 @@ bool CollectorArms :: Enable ()
 
 	ML -> SetControlMode ( PICServo :: kPWM );
 	MR -> SetControlMode ( PICServo :: kPWM );
+
+	ML -> Set ( 0 );
+	ML -> Set ( 0 );
 
 	return true;
 
@@ -101,10 +106,22 @@ bool CollectorArms :: DrivePositions ( double L, double R )
 	ML -> SetControlMode ( PICServo :: kPosition );
 	MR -> SetControlMode ( PICServo :: kPosition );
 
-	ML -> Set ( L * PreScale * ( LInverted ? -1 : 1 ) );
-	MR -> Set ( R * PreScale * ( RInverted ? -1 : 1 ) );
+	ML -> Set ( L );
+	MR -> Set ( R );
 
 	return ML -> GetMoveDone () && MR-> GetMoveDone ();
+
+};
+
+bool CollectorArms :: ArmPositionsWithin ( double Threshold, double L, double R )
+{
+
+	double LD = fabs ( L - ML -> GetPosition () );
+	double RD = fabs ( R - MR -> GetPosition () );
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Left diff: %f, Right diff: %f, Reached: %s\n", LD, RD, ( ( LD < Threshold ) && ( RD < Threshold ) ) ? "True" : "False" );
+
+	return ( ( LD < Threshold ) && ( RD < Threshold ) );
 
 };
 

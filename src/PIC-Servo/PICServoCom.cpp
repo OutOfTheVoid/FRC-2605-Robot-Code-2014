@@ -175,7 +175,7 @@ void PICServoCom :: ModuleReadStatus ( uint8_t Module, uint8_t Type, PICServoSta
 
 	uint8_t TempStatusBytes [ TempStatusSize ];
 
-	SendMessage ( Module, PICSERVO_COMMAND_DEF_STAT | PICSERVO_DEF_STAT_DATASIZE_1, Data, 1 );
+	SendMessage ( Module, PICSERVO_COMMAND_READ_STAT | PICSERVO_DEF_STAT_DATASIZE_1, Data, 1 );
 	ReceiveMessage ( TempStatusBytes, TempStatusSize );
 
 	uint8_t Counter = 1;

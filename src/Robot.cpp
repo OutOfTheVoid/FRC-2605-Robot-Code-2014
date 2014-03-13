@@ -6,7 +6,7 @@ Robot :: Robot ():
 {
 
 	Log = Logger :: GetInstance ();
-	Log -> SetPrintLevel ( Logger :: LOG_DEBUG3 );
+	Log -> SetPrintLevel ( Logger :: LOG_DEBUG );
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Starting **\n" );
 
@@ -19,10 +19,15 @@ Robot :: Robot ():
 	InitMotors ();
 	InitControls ();
 	InitBehaviors ();
+	InitDecorations ();
+
+	Winch -> SetZero ();
+	Arms -> SetZeros ();
 
 	TestCount = 0;
 	AutoCount = 0;
 	TeleCount = 0;
+	DisbCount = 0;
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Started **\n" );
 
@@ -49,7 +54,7 @@ void Robot :: InitSensors ()
 	DistanceSensorAnalog = new AnalogChannel ( 1, 6 );
 	BallSensor = new IRDistanceSensor ( DistanceSensorAnalog );
 
-	BallPositionSwitch = new DigitalInput ( 1 );
+	BallPositionSwitch = new DigitalInput ( 4 );
 
 };
 
@@ -136,25 +141,26 @@ void Robot :: InitMotors ()
 
 	// ARMS/WINCH
 
+	Wait ( 3.0 );
 	Log -> Log ( Logger :: LOG_EVENT, "Initializing PIC-Servos\n" );
 
 	PICServoControl -> AddPICServo ( 1, false, 3, 4 );
-	PICServoControl -> AddPICServo ( 2, false, 4, 3 );
+	PICServoControl -> AddPICServo ( 3, false, 4, 3 );
 	PICServoControl -> AddPICServo ( 4, false, 9, 5 );
 
 	ArmL = PICServoControl -> GetModule ( 1 );
 
 	ArmL -> SetEncoderResolution ( 360 * 4 );
-	ArmL -> SetPID ( 0.35, 0.0, 0.0, 0.4 );
-	ArmL -> ConfigVelocity ( 0.04 );
-	ArmL -> ConfigAcceleration ( 0.002 );
+	ArmL -> SetPID ( 0.5, 0.001, 0.05, 0.65 );
+	ArmL -> ConfigVelocity ( 1.0 );
+	ArmL -> ConfigAcceleration ( 0.1 );
 
-	ArmR = PICServoControl -> GetModule ( 2 );
+	ArmR = PICServoControl -> GetModule ( 3 );
 
 	ArmR -> SetEncoderResolution ( 360 * 4 );
-	ArmR -> SetPID ( 0.35, 0.0, 0.0, 0.4 );
-	ArmR -> ConfigVelocity ( 0.04 );
-	ArmR -> ConfigAcceleration ( 0.002 );
+	ArmR -> SetPID ( 0.5, 0.001, 0.05, 0.65 );
+	ArmR -> ConfigVelocity ( 1.0 );
+	ArmR -> ConfigAcceleration ( 0.1 );
 
 	Arms = new CollectorArms ( ArmL, ArmR );
 
@@ -165,9 +171,9 @@ void Robot :: InitMotors ()
 	WinchM = PICServoControl -> GetModule ( 4 );
 
 	WinchM -> SetEncoderResolution ( 1000 );
-	WinchM -> SetPID ( 1.0, 0, 3.0, 1.0, 0.2, 0.23529 );
-	WinchM -> ConfigAcceleration ( 0.0015258789 );
-	WinchM -> ConfigVelocity ( 1.525878 );
+	WinchM -> SetPID ( 0.27, 0, 0.01, 1.0, 0.4 );
+	WinchM -> ConfigAcceleration ( 0.1258789 );
+	WinchM -> ConfigVelocity ( 2.0 );
 
 	Winch = new ShooterWinch ( WinchM );
 
@@ -181,17 +187,28 @@ void Robot :: InitBehaviors ()
 	Behaviors = new BehaviorController ();
 
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
-	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms );
+	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms, Shooter );
 
 	BALL_PICKUP_BEHAVIOR = "BallPickup";
 	BallPickup = new BallPickupBehavior ( Shooter, Arms, Drive, GearStepper, OnShiftDelegate, BallSensor, BallPositionSwitch );
 
 	AUTONOMOUS_START_BEHAVIOR = "AutonomousStart";
-	AutonomousStart = new AutonomousStartBehavior ( Arms );
+	AutonomousStart = new AutonomousStartBehavior ( Arms, Winch );
 
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
 	Behaviors -> AddBehavior ( AUTONOMOUS_START_BEHAVIOR, AutonomousStart );
+
+};
+
+void Robot :: InitDecorations ()
+{
+
+	//LEDs = new LEDStrip ( 1, 2, 7 );
+
+	//TestAnimation = BuildTestAnimation ( LEDs );
+
+	//LEDs -> Clear ();
 
 };
 
@@ -312,21 +329,9 @@ void Robot :: AutonomousInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Autonomous" );
 	DsLcd -> UpdateLCD ();
 
-	TargetFound = false;
-
-	/*Log -> Log ( Logger :: LOG_DEBUG, "Starting auto tasks...\n" );
-
-	VisionTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
-	AutonomousTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
-
-	Log -> Log ( Logger :: LOG_DEBUG, "Starting behaviors...\n" );
-
 	Behaviors -> StartBehavior ( AUTONOMOUS_START_BEHAVIOR );
 
-	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );*/
-
-	Arms -> Enable ();
-	Arms -> SetZeros ();
+	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );
 
 };
 
@@ -335,23 +340,17 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	/*Behaviors -> Update ();*/
-	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f\n", ArmL -> GetPosition () );
-
-	ArmL -> SetControlMode ( PICServo :: kPosition );
-	ArmL -> Set ( 0.67014 );
+	Log -> Log ( Logger :: LOG_DEBUG3, "BEHAVIOR_UPDATE!\n" );
+	Behaviors -> Update ();
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	Arms -> Disable ();
+	Winch -> Disable ();
 
-	/*Behaviors -> StopBehavior ( AUTONOMOUS_START_BEHAVIOR );
-
-	AutonomousTask -> Stop ();
-	VisionTask -> Stop ();*/
+	Behaviors -> StopBehavior ( AUTONOMOUS_START_BEHAVIOR );
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
@@ -377,9 +376,6 @@ void Robot :: TeleopInit ()
 	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
-	
-	Drive -> Enable ();
-	Shooter -> Enable ();
 
 	Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
@@ -394,20 +390,34 @@ void Robot :: TeleopPeriodic ()
 
 	Behaviors -> Update ();
 
-	if ( RotateStick -> GetRawButton ( 1 ) )
+	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
 	{
 
-		Shooter -> SetSpeed ( 1.0 );
+		if ( TeleopDrive -> DoPickup () )
+		{
+
+			Log -> Log ( Logger :: LOG_DEBUG, "Switching to BallPickup\n" );
+
+			Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
+			Behaviors -> StartBehavior ( BALL_PICKUP_BEHAVIOR );
+
+		}
 
 	}
-	else if ( RotateStick -> GetRawButton ( 3 ) )
-		Shooter -> SetSpeed ( 0.17 );
-	else if ( RotateStick -> GetRawButton ( 2 ) )
-		Shooter -> SetSpeed ( - 0.17 );
-	else
-		Shooter -> SetSpeed ( 0 );
+	else if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
+	{
 
-	Shooter -> PushSpeeds ();
+		if ( BallPickup -> IsDone () )
+		{
+
+			Log -> Log ( Logger :: LOG_DEBUG, "Switching to TeleopDrive\n" );
+
+			Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
+			Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
+
+		}
+
+	}
 
 };
 
@@ -416,7 +426,11 @@ void Robot :: TeleopEnd ()
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop X   =\n================\n" );
 
-	Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
+	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
+		Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
+
+	if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
+		Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
 
 	DsLcd -> UpdateLCD ();
 
@@ -451,83 +465,16 @@ void Robot :: TestInit ()
 	if ( Mode != TestMode )
 		DisabledEnd ();
 
-	Log -> Log ( Logger :: LOG_EVENT, "================\n=    Test !     =\n================\n" );
-
 	Mode = TestMode;
 
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=    Test !     =\n================\n" );
+
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "Please select a test:" );
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "8: Cal. Wench" );
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "11: Cal. Ball Sensor" );
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "10: Pickup Ball" );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "0.2 Meters," );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 3" );
 	DsLcd -> UpdateLCD ();
 
-	WinchM -> CalibrateAnalog ();
-	ArmL -> CalibrateAnalog ();
-	ArmR -> CalibrateAnalog ();
-
-	ArmL -> ResetPosition ();
-	ArmR -> ResetPosition ();
-
 	TestPeriodMode = 0;
-
-	while ( TestPeriodMode == 0 && IsEnabled () )
-	{
-
-		if ( StrafeStick -> GetRawButton ( 8 ) )
-		{
-
-			Log -> Log ( Logger :: LOG_EVENT, "Winch Calibration\n" );
-
-			TestPeriodMode = 1;
-
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE WENCH **" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Use 11/10 to move wench" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "to 0, with slack. Then," );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "press 3." );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "BALL: %f m", BallSensor -> Get () );
-			DsLcd -> UpdateLCD ();
-
-			Winch -> Enable ();
-
-		}
-
-		if ( StrafeStick -> GetRawButton ( 11 ) )
-		{
-
-			Log -> Log ( Logger :: LOG_EVENT, "Ball Sensor Calibration\n" );
-
-			TestPeriodMode = 2;
-
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE BALL SENSE **" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Place ball 0.2m from," );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "bot, press 3." );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "BALL: %f m", BallSensor -> Get () );
-			DsLcd -> UpdateLCD ();
-
-		}
-
-		if ( StrafeStick -> GetRawButton ( 10 ) )
-		{
-
-			Log -> Log ( Logger :: LOG_EVENT, "Ball Pickup\n" );
-
-			TestPeriodMode = 3;
-			
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** PICKUP BALL **" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "" );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "BALL: %f m", BallSensor -> Get () );
-			DsLcd -> UpdateLCD ();
-
-		}
-
-		m_ds -> WaitForData ();
-		Wait ( 0.01 );
-
-	}
 
 };
 
@@ -539,63 +486,45 @@ void Robot :: TestPeriodic ()
 	switch ( TestPeriodMode )
 	{
 
-		case 1:
+	case 0:
 
-			if ( StrafeStick -> GetRawButton ( 10 ) )
-				Winch -> DrivePWM ( 0.5 );
-			else if ( StrafeStick -> GetRawButton ( 11 ) )
-				Winch -> DrivePWM ( - 0.5 );
-			else
-				Winch -> Stop ();
+		if ( StrafeStick -> GetRawButton ( 3 ) )
+		{
 
-			if ( StrafeStick -> GetRawButton ( 3 ) )
-				TestInit ();
+			BallSensor -> CalibHighPoint ( 0.2 );
 
-			break;
-		case 2:
+			TestPeriodMode = 1;
 
-			if ( StrafeStick -> GetRawButton ( 3 ) )
-			{
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "0.8 Meters," );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 2." );
 
-				BallSensor -> CalibHighPoint ( 0.8 );
+		}
 
-				TestPeriodMode = 4;
+		break;
 
-				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line2, "** CALIBRATE BALL SENSE **" );
-				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "Place ball 0.8m from," );
-				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "bot, press 2." );
-				DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "" );
-				DsLcd -> UpdateLCD ();
+	case 1:
 
-			}
+		if ( StrafeStick -> GetRawButton ( 2 ) )
+		{
 
-			break;
+			BallSensor -> CalibLowPoint ( 0.8 );
 
-		case 3:
+			TestPeriodMode = 0;
 
-			TestInit ();
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "0.2 Meters," );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 3" );
 
-			break;
+		}
 
-		case 4:
+		break;
 
-			if ( StrafeStick -> GetRawButton ( 2 ) )
-			{
+	default:
+		break;
 
-				BallSensor -> CalibLowPoint ( 0.2 );
-
-				TestInit ();
-
-			}
-
-			break;
-
-		default:
-
-			TestInit ();
-
-			break;
 	}
+
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "X: %f", BallSensor -> Get () );
+	DsLcd -> UpdateLCD ();
 
 };
 
@@ -652,6 +581,17 @@ void Robot :: DisabledInit ()
 
 void Robot :: DisabledPeriodic ()
 {
+
+	DisbCount ++;
+
+	/*LEDs -> SetPixelColor ( ( DisbCount + 0 ) % 7, 0xFF0000 );
+	LEDs -> SetPixelColor ( ( DisbCount + 1 ) % 7, 0x00FF00 );
+	LEDs -> SetPixelColor ( ( DisbCount + 2 ) % 7, 0x0000FF );
+	LEDs -> SetPixelColor ( ( DisbCount + 3 ) % 7, 0xFFFF00 );
+	LEDs -> SetPixelColor ( ( DisbCount + 4 ) % 7, 0xFF00FF );
+	LEDs -> SetPixelColor ( ( DisbCount + 5 ) % 7, 0x00FFFF );
+	LEDs -> SetPixelColor ( ( DisbCount + 6 ) % 7, 0xFFFFFF );*/
+	//LEDs -> PushColors ();
 
 	//Arms -> CalibratePICServoAnalogs ();
 

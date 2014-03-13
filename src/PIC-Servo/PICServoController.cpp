@@ -651,7 +651,7 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_DISABLE_MESSAGE:
 
-				Log -> Log ( Logger :: LOG_DEBUG, "PICSERVO_DISABLE\n" );
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_DISABLE\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -666,7 +666,7 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_ENABLE_MESSAGE:
 
-				Log -> Log ( Logger :: LOG_DEBUG, "PICSERVO_ENABLE\n" );
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_ENABLE\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -681,7 +681,7 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_SETPWM_MESSAGE:
 
-				Log -> Log ( Logger :: LOG_DEBUG, "PICSERVO_SETPWM\n" );
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPWM\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -705,6 +705,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_SETPOSITION_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPOSITION\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				SetPositionMessage * PMessage = reinterpret_cast <SetPositionMessage *> ( Message -> Data );
@@ -726,6 +728,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_SETPOSITIONV_MESSAGE:
+
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPOSITION\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -749,6 +753,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_SETPOSITIONA_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPOSITION\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				SetPositionAMessage * PAMessage = reinterpret_cast <SetPositionAMessage *> ( Message -> Data );
@@ -770,6 +776,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_SETPOSITIONVA_MESSAGE:
+
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPOSITION\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -793,7 +801,7 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_RESETPOSITION_MESSAGE:
 
-				Log -> Log ( Logger :: LOG_DEBUG, "RESETPOSITION\n" );
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPOSITION\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -813,6 +821,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_SETCURRENTPOSITION_MESSAGE:
+
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETCURRENTPOSITION\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -856,6 +866,8 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_SETVELOCITY_MESSAGE:
 
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETVELOCITY\n" );
+
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
 				SetVelocityMessage * SVMessage = reinterpret_cast <SetVelocityMessage *> ( Message -> Data );
@@ -877,6 +889,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_SETVELOCITYA_MESSAGE:
+
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETVELOCITY\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -900,7 +914,7 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_SETPID_MESSAGE:
 
-				Log -> Log ( Logger :: LOG_DEBUG, "SETPID\n" );
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_SETPID\n" );
 
 				semTake ( ModuleSemaphore, WAIT_FOREVER );
 
@@ -909,7 +923,7 @@ void PICServoController :: RunLoop ()
 				Module = Modules [ SPIDMessage -> Index ];
 
 				Com -> SetStatusType ( Module -> StatusType );
-				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024 ), 32767, static_cast <uint8_t> ( SPIDMessage -> MaxOutput * 0xFF ), 127, SPIDMessage -> PositionError, 1, SPIDMessage -> DeadbandCompensation );
+				Com -> ModuleSetMetrics ( SPIDMessage -> Index, static_cast <uint16_t> ( SPIDMessage -> P * 1024.0 ), static_cast <uint16_t> ( SPIDMessage -> I * 1024.0 ), static_cast <uint16_t> ( SPIDMessage -> D * 1024.0 ), 32767, static_cast <uint8_t> ( SPIDMessage -> MaxOutput * 255.0 ), 127, SPIDMessage -> PositionError, 1, static_cast <uint8_t> ( SPIDMessage -> DeadbandCompensation * 255.0 ) );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
@@ -923,6 +937,8 @@ void PICServoController :: RunLoop ()
 				break;
 
 			case PICSERVO_INIT_MESSAGE:
+
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_INIT\n" );
 
 				Module = Modules [ Message -> Data ];
 
@@ -956,9 +972,9 @@ void PICServoController :: RunLoop ()
 
 			case PICSERVO_REINIT_MESSAGE:
 
-				Module = Modules [ Message -> Data ];
+				Log -> Log ( Logger :: LOG_DEBUG2, "PICSERVO_REINIT\n" );
 
-				Log -> Log ( Logger :: LOG_DEBUG, "Defining module status...\n" );
+				Module = Modules [ Message -> Data ];
 
 				Com -> SetStatusType ( Module -> StatusType );
 				Com -> ModuleDefineStatus ( Message -> Data, Module -> StatusType );
@@ -996,19 +1012,14 @@ void PICServoController :: RunLoop ()
 
 				Module = Modules [ Message -> Data ];
 
-				double T = Timer :: GetPPCTimestamp ();
+				Com -> SetStatusType ( Module -> StatusType );
+				Com -> ModuleGetStatus ( Message -> Data );
+				Com -> ReceiveStatusPacket ();
+				Com -> ModuleGetStatus ( Message -> Data );
+				Com -> ReceiveStatusPacket ();
+				Com -> GetStatus ( & Module -> LastStatus );
 
-				if ( T - Module -> LastStatusTime > MAXIMUM_UPDATE_DELTA_TIME )
-				{
-
-					Com -> SetStatusType ( Module -> StatusType );
-					Com -> ModuleGetStatus ( Message -> Data );
-					Com -> ReceiveStatusPacket ();
-					Com -> GetStatus ( & Module -> LastStatus );
-
-					Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
-
-				}
+				Module -> LastStatusTime = Timer :: GetPPCTimestamp ();
 
 				ResponseMessage = new ServerMessage ();
 

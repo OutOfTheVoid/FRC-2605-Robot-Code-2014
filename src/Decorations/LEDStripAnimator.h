@@ -38,6 +38,9 @@ public:
 	double GetRemainingFrameTime ();
 	void WaitTillNextFrame ();
 
+	void Start ();
+	void Stop ();
+
 	void Update ();
 
 private:

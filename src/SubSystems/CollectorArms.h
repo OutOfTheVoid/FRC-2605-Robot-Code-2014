@@ -3,6 +3,10 @@
 
 #include "src/PIC-Servo/PICServo.h"
 
+#include "src/Logging/Logger.h"
+
+#include <cmath>
+
 class CollectorArms
 {
 public:
@@ -23,6 +27,8 @@ public:
 
 	void SetFreeDrivePower ( double Power );
 	void DrivePWM ( double Value );
+
+	bool ArmPositionsWithin ( double Threshold, double L, double R );
 
 	void Stop ();
 
@@ -51,6 +57,8 @@ private:
 	bool Enabled;
 
 	bool LInverted, RInverted;
+
+	Logger * Log;
 
 };
 

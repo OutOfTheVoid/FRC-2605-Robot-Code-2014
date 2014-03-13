@@ -15,14 +15,14 @@
 
 #include "src/Util/Delegate.h"
 
-#define BELT_COLLECTION_SPEED 0.2
+#define DRIVE_BACK_SPEED 0.5
 
-#define ARM_OUT_POSTION 0.01
-#define ARM_IN_POSITION 0.3
+#define SPEED_COLLECT 0.2
 
-#define BALL_SENSOR_THRESHOLD 0.20
+#define BALL_THRESHOLD 0.3
 
-#define MAX_POSITION_WAIT 1.5
+#define ARM_LEFT_CLOSE - 0.661111
+#define ARM_RIGHT_CLOSE 0.883333
 
 class BallPickupBehavior : public Behavior
 {
@@ -36,15 +36,20 @@ public:
 	void Stop ();
 	void Restart ();
 
+	bool Active ();
+
+	bool IsDone ();
+
 private:
 
 	typedef enum BehaviorState
 	{
 
 		STATE_START = 0,
-		STATE_MOVE_ARMS_OUT,
-		STATE_DRIVE_TO_BALL,
-		STATE_CLAMP_BALL,
+		STATE_DRIVE_BACK,
+		STATE_CLAMPING,
+		STATE_HAVE_BALL,
+		STATE_FINISHED
 
 	} BehaviorState;
 

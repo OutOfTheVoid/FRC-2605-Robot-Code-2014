@@ -42,6 +42,8 @@ public:
 	bool GetLimit1 ();
 	bool GetLimit2 ();
 
+	void SetHardwearLimitingEnabled ( bool Enabled );
+
 	bool GetMoveDone ();
 
 	void Set ( double Value );
@@ -49,7 +51,7 @@ public:
 	void ResetPosition ();
 	void SetCurrentPosition ( double Position );
 
-	void SetPID ( double P, double I, double D, double OutputLimit = 1, double PositionErrorLimit = DBL_MAX, double DeadbandCompensation = 1.0 );
+	void SetPID ( double P, double I, double D, double OutputLimit = 1, double PositionErrorLimit = DBL_MAX, double DeadbandCompensation = 0.0 );
 
 	double GetLastP ();
 	double GetLastI ();
@@ -70,6 +72,7 @@ private:
 
 	double Acceleration;
 	double Velocity;
+	double LastSetValue;
 
 	double P;
 	double I;

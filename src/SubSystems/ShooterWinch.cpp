@@ -5,10 +5,8 @@ ShooterWinch :: ShooterWinch ( PICServo * Motor )
 
 	M = Motor;
 
-	PreScale = 1;
 	Inverted = false;
-
-	PreviousAllowSlop = false;
+	Enabled = false;
 
 };
 
@@ -26,13 +24,10 @@ void ShooterWinch :: SetInverted ( bool Inverted )
 
 };
 
-void ShooterWinch :: SetPreScale ( double Scale )
+void ShooterWinch :: SetZero ()
 {
 
-	if ( Enabled )
-		return;
-
-	this -> PreScale = Scale;
+	M -> ResetPosition ();
 
 };
 
@@ -66,11 +61,20 @@ bool ShooterWinch :: GetEnabled ()
 
 };
 
+bool ShooterWinch :: WithinAngle ( double Threshold, double Angle )
+{
+
+	double D = fabs ( Angle - M -> GetPosition () );
+
+	return D < Threshold;
+
+};
+
 bool ShooterWinch :: DriveAngle ( double Angle )
 {
 
 	M -> SetControlMode ( PICServo :: kPosition );
-	M -> Set ( Angle * PreScale * ( Inverted ? -1 : 1 ) );
+	M -> Set ( Angle * ( Inverted ? -1 : 1 ) );
 
 	return M -> GetMoveDone ();
 
