@@ -134,6 +134,6 @@ void TeleopDriveBehavior :: ControlArms ()
 	if ( StrafeStick -> GetRawButton ( 10 ) )
 		Arms -> DrivePWM ( - 0.5 );
 	else
-		Arms -> DrivePositions ( ARM_LEFT_OUT, ARM_RIGHT_OUT );
+		Arms -> DrivePositions ( T_ARM_LEFT_OUT, T_ARM_RIGHT_OUT );
 
 }

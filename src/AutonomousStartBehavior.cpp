@@ -57,9 +57,9 @@ void AutonomousStartBehavior :: Update ()
 
 	case STATE_START:
 
-		Arms -> DrivePositions ( ARM_LEFT_OUT, 0 );
+		Arms -> DrivePositions ( A_ARM_LEFT_OUT, 0 );
 
-		if ( Arms -> ArmPositionsWithin ( 0.04, ARM_LEFT_OUT, 0 ) )
+		if ( Arms -> ArmPositionsWithin ( 0.04, A_ARM_LEFT_OUT, 0 ) )
 		{
 
 			Log -> Log ( Logger :: LOG_DEBUG, "Autonomous Start Behavior: State change to STATE_ARML_OUT!!!\n" );
@@ -87,9 +87,9 @@ void AutonomousStartBehavior :: Update ()
 
 	case STATE_WINCH_ARMDEPLOY:
 
-		Arms -> DrivePositions ( ARM_LEFT_OUT, ARM_RIGHT_OUT );
+		Arms -> DrivePositions ( A_ARM_LEFT_OUT, A_ARM_RIGHT_OUT );
 
-		if ( Arms -> ArmPositionsWithin ( 0.04, ARM_LEFT_OUT, ARM_RIGHT_OUT ) )
+		if ( Arms -> ArmPositionsWithin ( 0.04, A_ARM_LEFT_OUT, A_ARM_RIGHT_OUT ) )
 		{
 
 			State = STATE_BALL_DEPLOY;

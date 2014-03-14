@@ -18,8 +18,8 @@
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
-#define ARM_LEFT_OUT - 0.93611
-#define ARM_RIGHT_OUT 1.16875
+#define T_ARM_LEFT_OUT - 0.93611
+#define T_ARM_RIGHT_OUT 1.16875
 
 class TeleopDriveBehavior : public Behavior
 {

@@ -8,12 +8,12 @@
 
 #include "Logging/Logger.h"
 
-#define ARM_LEFT_OUT - 0.67014
-#define ARM_RIGHT_OUT 0.23472
+#define A_ARM_LEFT_OUT - 0.67014
+#define A_ARM_RIGHT_OUT 0.23472
 
-#define WINCH_ARMOUT - 0.07
+#define WINCH_ARMOUT - 0.15
 
-#define WINCH_BALLDROP - 0.20
+#define WINCH_BALLDROP - 0.28
 
 #define WINCH_BALL_ANGLE - 0.08
 

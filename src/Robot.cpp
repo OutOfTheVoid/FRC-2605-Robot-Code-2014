@@ -152,13 +152,13 @@ void Robot :: InitMotors ()
 
 	ArmL -> SetEncoderResolution ( 360 * 4 );
 	ArmL -> SetPID ( 0.5, 0.001, 0.05, 0.65 );
-	ArmL -> ConfigVelocity ( 1.0 );
+	ArmL -> ConfigVelocity ( 0.8 );
 	ArmL -> ConfigAcceleration ( 0.1 );
 
 	ArmR = PICServoControl -> GetModule ( 3 );
 
 	ArmR -> SetEncoderResolution ( 360 * 4 );
-	ArmR -> SetPID ( 0.5, 0.001, 0.05, 0.65 );
+	ArmR -> SetPID ( 0.3, 0.001, 0.025, 0.65 );
 	ArmR -> ConfigVelocity ( 1.0 );
 	ArmR -> ConfigAcceleration ( 0.1 );
 
@@ -171,7 +171,7 @@ void Robot :: InitMotors ()
 	WinchM = PICServoControl -> GetModule ( 4 );
 
 	WinchM -> SetEncoderResolution ( 1000 );
-	WinchM -> SetPID ( 0.27, 0, 0.01, 1.0, 0.4 );
+	WinchM -> SetPID ( 0.29, 0, 0.01, 1.0, 0.4, 0.05 );
 	WinchM -> ConfigAcceleration ( 0.1258789 );
 	WinchM -> ConfigVelocity ( 2.0 );
 
@@ -392,6 +392,8 @@ void Robot :: TeleopPeriodic ()
 
 	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
 	{
+
+		Log -> Log ( Logger :: LOG_DEBUG2, "Arm right: %f\n", ArmR -> GetPosition () );
 
 		if ( TeleopDrive -> DoPickup () )
 		{
