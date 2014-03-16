@@ -1,10 +1,12 @@
 #include "AutonomousStartBehavior.h"
 
-AutonomousStartBehavior :: AutonomousStartBehavior ( CollectorArms * Arms, ShooterWinch * Winch )
+AutonomousStartBehavior :: AutonomousStartBehavior ( CollectorArms * Arms, ShooterWinch * Winch, MecanumDrive * Drive, ShooterBelts * Belts )
 {
 
 	this -> Arms = Arms;
 	this -> Winch = Winch;
+	this -> Drive = Drive;
+	this -> Belts = Belts;
 
 	Log = Logger :: GetInstance ();
 
@@ -28,6 +30,12 @@ void AutonomousStartBehavior :: Start ()
 	if ( ! Winch -> GetEnabled () )
 		Winch -> Enable ();
 
+	if ( ! Drive -> GetEnabled () )
+		Drive -> Enable ();
+
+	if ( ! Belts -> GetEnabled () )
+		Belts -> Enable ();
+
 	Arms -> SetZeros ();
 	Winch -> SetZero ();
 
@@ -41,10 +49,13 @@ void AutonomousStartBehavior :: Stop ()
 {
 
 	Arms -> Disable ();
+	Winch -> Disable ();
+	Drive -> Disable ();
+	Belts -> Disable ();
 
 };
 
-void AutonomousStartBehavior :: Restart ()
+void AutonomousStartBehavior :: Restart () 
 {
 
 };
@@ -57,68 +68,78 @@ void AutonomousStartBehavior :: Update ()
 
 	case STATE_START:
 
-		Arms -> DrivePositions ( A_ARM_LEFT_OUT, 0 );
+		TimerStart = Timer :: GetPPCTimestamp ();
+		
+		State = STATE_DRIVE_FORWARD;
 
-		if ( Arms -> ArmPositionsWithin ( 0.04, A_ARM_LEFT_OUT, 0 ) )
-		{
-
-			Log -> Log ( Logger :: LOG_DEBUG, "Autonomous Start Behavior: State change to STATE_ARML_OUT!!!\n" );
-
-			State = STATE_ARML_OUT; 
-
-		}
+		/*State = STATE_WINCH_BALLDROP;
 
 		break;
 
-	case STATE_ARML_OUT:
-
-		Winch -> DriveAngle ( WINCH_ARMOUT );
-
-		if ( Winch -> WithinAngle ( 0.01, WINCH_ARMOUT ) )
-		{
-
-			State = STATE_WINCH_ARMDEPLOY;
-
-			Log -> Log ( Logger :: LOG_DEBUG, "Autonomous Start Behavior: State change to STATE_WINCH_ARMDEPLOY!!!\n" );
-
-		}
-
-		break;
-
-	case STATE_WINCH_ARMDEPLOY:
-
-		Arms -> DrivePositions ( A_ARM_LEFT_OUT, A_ARM_RIGHT_OUT );
-
-		if ( Arms -> ArmPositionsWithin ( 0.04, A_ARM_LEFT_OUT, A_ARM_RIGHT_OUT ) )
-		{
-
-			State = STATE_BALL_DEPLOY;
-
-			Log -> Log ( Logger :: LOG_DEBUG, "Autonomous Start Behavior: State change to STATE_BALL_DEPLOY!!!\n" );
-
-		}
-
-	case STATE_BALL_DEPLOY:
+	case STATE_WINCH_BALLDROP:
 
 		Winch -> DriveAngle ( WINCH_BALLDROP );
 
-		if ( Winch -> WithinAngle ( 0.01, WINCH_BALLDROP ) )
+		if ( Winch -> WithinAngle ( 0.03, WINCH_BALLDROP ) )
 		{
 
 			State = STATE_BALL_CLAMP;
-
-			Log -> Log ( Logger :: LOG_DEBUG, "Autonomous Start Behavior: State change to STATE_BALL_CLAMP!!!\n" );
+			TimerStart = Timer :: GetPPCTimestamp ();
 
 		}
+
+		break;
 
 	case STATE_BALL_CLAMP:
 
 		Winch -> DriveAngle ( WINCH_BALL_ANGLE );
-		State = STATE_END;
+		State = STATE_DRIVE_FORWARD;
 
-		Log -> Log ( Logger :: LOG_DEBUG, "Autonomous Start Behavior: State change to STATE_END!!!\n" );
+		TimerStart = Timer :: GetPPCTimestamp ();
+
+		break;*/
+
+	case STATE_DRIVE_FORWARD:
+
+		Drive -> SetTranslation ( 0.0, - 1.0 );
+		Drive -> PushTransform ();
+		Winch -> DrivePWM ( 0.2 );
+
+		if ( Timer :: GetPPCTimestamp () - TimerStart > 1.6 )
+		{
+
+			State = STATE_END;
+
+			TimerStart = Timer :: GetPPCTimestamp ();
+
+		}
+
+		break;
+
+	case STATE_SHOOT:
+
+		Drive -> SetTranslation ( 0.0, 0.0 );
+		Drive -> PushTransform ();
+
+		Belts -> SetSpeed ( 1.0 );
+		Belts -> PushSpeeds ();
+
+		if ( Timer :: GetPPCTimestamp () - TimerStart > 2.0 )
+		{
+
+			State = STATE_END;
+
+		}
+
+		break;
 
 	case STATE_END:
+
+		Belts -> SetSpeed ( 0.0 );
+		Belts -> PushSpeeds ();
+
+		break;
+
 	default:
 		break;
 

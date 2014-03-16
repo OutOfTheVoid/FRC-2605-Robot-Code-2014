@@ -1067,7 +1067,7 @@ void PICServoController :: RunLoop ()
 				Module = Modules [ Message -> Data ];
 
 				Com -> SetStatusType ( Module -> StatusType );
-				Com -> ModuleIOControl ( Message -> Data & 0xFF, ( Message -> Data & 0x100 ) != 0, false );
+				Com -> ModuleIOControl ( ( ( Message -> Data ) & 0xFF ), ( ( ( Message -> Data ) & 0x100 ) != 0 ), false );
 				Com -> ReceiveStatusPacket ();
 				Com -> GetStatus ( & Module -> LastStatus );
 
@@ -1076,6 +1076,8 @@ void PICServoController :: RunLoop ()
 				semGive ( ModuleSemaphore );
 
 				delete Message;
+
+				break;
 
 			default:
 

@@ -2,7 +2,8 @@
 
 Robot :: Robot ():
 	WheelConfig (),
-	BeltConfig ()
+	ClosedLoopBeltConfig (),
+	OpenLoopBeltConfig ()
 {
 
 	Log = Logger :: GetInstance ();
@@ -67,7 +68,7 @@ void Robot :: InitControls ()
 
 	StrafeStick = new Joystick ( 1 );
 	RotateStick = new Joystick ( 2 );
-	ShootStick = new Joystick ( 3 );
+	CancelStick = new Joystick ( 3 );
 
 	OnShiftDelegate = new ClassDelegate <Robot, void> ( this, & Robot :: OnShift );
 
@@ -109,7 +110,7 @@ void Robot :: InitMotors ()
 	WheelFL = new AsynchCANJaguar ( JagServer, 7, WheelConfig );
 	WheelFR = new AsynchCANJaguar ( JagServer, 1, WheelConfig );
 	WheelRL = new AsynchCANJaguar ( JagServer, 5, WheelConfig );
-	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig );
+	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig ); 
 
 	Drive = new MecanumDrive ( WheelFL, WheelFR, WheelRL, WheelRR );
 
@@ -121,23 +122,28 @@ void Robot :: InitMotors ()
 
 	// BELTS
 
-	BeltConfig.Mode = CANJaguar :: kSpeed;
-	BeltConfig.P = BELT_P;
-	BeltConfig.I = BELT_I;
-	BeltConfig.D = BELT_D;
-	BeltConfig.EncoderLinesPerRev = BELT_ENCODER_CODES_PER_REVOLUTION;
-	BeltConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
-	BeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
-	BeltConfig.MaxVoltage = 14;
-	BeltConfig.FaultTime = 0.51;
+	ClosedLoopBeltConfig.Mode = CANJaguar :: kSpeed;
+	ClosedLoopBeltConfig.P = BELT_P;
+	ClosedLoopBeltConfig.I = BELT_I;
+	ClosedLoopBeltConfig.D = BELT_D;
+	ClosedLoopBeltConfig.EncoderLinesPerRev = BELT_ENCODER_CODES_PER_REVOLUTION;
+	ClosedLoopBeltConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
+	ClosedLoopBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
+	ClosedLoopBeltConfig.MaxVoltage = 14;
+	ClosedLoopBeltConfig.FaultTime = 0.51;
 
-	BeltL = new AsynchCANJaguar ( JagServer, 8, BeltConfig );
-	BeltR = new AsynchCANJaguar ( JagServer, 6, BeltConfig );
+	OpenLoopBeltConfig.Mode = CANJaguar :: kPercentVbus;
+	OpenLoopBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	OpenLoopBeltConfig.MaxVoltage = 14;
+	OpenLoopBeltConfig.FaultTime = 0.51;
+
+	BeltL = new AsynchCANJaguar ( JagServer, 8, OpenLoopBeltConfig );
+	BeltR = new AsynchCANJaguar ( JagServer, 6, OpenLoopBeltConfig );
 
 	Shooter = new ShooterBelts ( BeltL, BeltR );
 
-	Shooter -> SetMotorScale ( BELT_SPEED_SCALE );
-	Shooter -> SetInverted ( false, true );
+	Shooter -> SetMotorScale ( BELT_SPEED_SCALE_CLOSED );
+	Shooter -> SetInverted ( false, true );	
 
 	// ARMS/WINCH
 
@@ -148,7 +154,7 @@ void Robot :: InitMotors ()
 	PICServoControl -> AddPICServo ( 3, false, 4, 3 );
 	PICServoControl -> AddPICServo ( 4, false, 9, 5 );
 
-	ArmL = PICServoControl -> GetModule ( 1 );
+	ArmL = PICServoControl -> GetModule ( 4 );
 
 	ArmL -> SetEncoderResolution ( 360 * 4 );
 	ArmL -> SetPID ( 0.5, 0.001, 0.05, 0.65 );
@@ -168,12 +174,12 @@ void Robot :: InitMotors ()
 
 	// WINCH
 
-	WinchM = PICServoControl -> GetModule ( 4 );
+	WinchM = PICServoControl -> GetModule ( 1 );
 
 	WinchM -> SetEncoderResolution ( 1000 );
-	WinchM -> SetPID ( 0.29, 0, 0.01, 1.0, 0.4, 0.05 );
-	WinchM -> ConfigAcceleration ( 0.1258789 );
-	WinchM -> ConfigVelocity ( 2.0 );
+	WinchM -> SetPID ( 0.9, 0, 0.3, 1.0, 0.25 );
+	WinchM -> ConfigAcceleration ( 0.3258789 );
+	WinchM -> ConfigVelocity ( 5.0 );
 
 	Winch = new ShooterWinch ( WinchM );
 
@@ -187,13 +193,13 @@ void Robot :: InitBehaviors ()
 	Behaviors = new BehaviorController ();
 
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
-	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms, Shooter );
+	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms, Shooter, CancelStick, Winch );
 
 	BALL_PICKUP_BEHAVIOR = "BallPickup";
 	BallPickup = new BallPickupBehavior ( Shooter, Arms, Drive, GearStepper, OnShiftDelegate, BallSensor, BallPositionSwitch );
 
 	AUTONOMOUS_START_BEHAVIOR = "AutonomousStart";
-	AutonomousStart = new AutonomousStartBehavior ( Arms, Winch );
+	AutonomousStart = new AutonomousStartBehavior ( Arms, Winch, Drive, Shooter );
 
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
@@ -203,12 +209,6 @@ void Robot :: InitBehaviors ()
 
 void Robot :: InitDecorations ()
 {
-
-	//LEDs = new LEDStrip ( 1, 2, 7 );
-
-	//TestAnimation = BuildTestAnimation ( LEDs );
-
-	//LEDs -> Clear ();
 
 };
 
@@ -333,6 +333,9 @@ void Robot :: AutonomousInit ()
 
 	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );
 
+	GearStepper -> Set ( 2 );
+	OnShift ();
+
 };
 
 void Robot :: AutonomousPeriodic ()
@@ -409,7 +412,7 @@ void Robot :: TeleopPeriodic ()
 	else if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
 	{
 
-		if ( BallPickup -> IsDone () )
+		if ( BallPickup -> IsDone () || CancelStick -> GetRawButton ( 2 ) )
 		{
 
 			Log -> Log ( Logger :: LOG_DEBUG, "Switching to TeleopDrive\n" );
@@ -450,8 +453,6 @@ void Robot :: TeleopTaskRoutine ()
 	{
 
 		Wait ( 0.01 );
-
-		
 
 	}
 
@@ -636,3 +637,5 @@ int Robot :: VisionTaskStub ( Robot * This )
 	return 0;
 
 };
+
+START_ROBOT_CLASS ( Robot )

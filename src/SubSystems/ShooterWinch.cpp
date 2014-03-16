@@ -80,6 +80,13 @@ bool ShooterWinch :: DriveAngle ( double Angle )
 
 };
 
+double ShooterWinch :: GetAngle ()
+{
+
+	return M -> GetPosition ();
+
+};
+
 void ShooterWinch :: DrivePWM ( double Value )
 {
 

@@ -62,13 +62,14 @@
 
 #define VISION_PRIORITY 102
 
-#define BELT_P 3.2000
-#define BELT_I 0.0200
-#define BELT_D 0.3000
+#define BELT_P 7.2000
+#define BELT_I 0.0500
+#define BELT_D 0.7000
 
-#define BELT_ENCODER_CODES_PER_REVOLUTION 1024
+#define BELT_ENCODER_CODES_PER_REVOLUTION 2500
 
-#define BELT_SPEED_SCALE 2500
+#define BELT_SPEED_SCALE_OPEN 1
+#define BELT_SPEED_SCALE_CLOSED 2500
 
 #define ARM_P 0.0000
 #define ARM_I 0.0000
@@ -175,7 +176,7 @@ private:
 
 	Joystick * StrafeStick;
 	Joystick * RotateStick;
-	Joystick * ShootStick;
+	Joystick * CancelStick;
 
 	// Tasks
 
@@ -190,7 +191,8 @@ private:
 
 	// Shooter
 
-	CANJagConfigInfo BeltConfig;
+	CANJagConfigInfo ClosedLoopBeltConfig;
+	CANJagConfigInfo OpenLoopBeltConfig;
 
 	AsynchCANJaguar * BeltL;
 	AsynchCANJaguar * BeltR;
@@ -250,7 +252,5 @@ private:
 	Logger * Log;
 
 };
-
-START_ROBOT_CLASS ( Robot );
 
 #endif

@@ -22,6 +22,8 @@ public:
 
 	bool WithinAngle ( double Threshold, double Angle );
 
+	double GetAngle ();
+
 	bool DriveAngle ( double Angle );
 	void DrivePWM ( double Value );
 

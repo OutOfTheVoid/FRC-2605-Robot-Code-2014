@@ -17,7 +17,7 @@ class ShooterBelts
 {
 public:
 
-	ShooterBelts ( SpeedController * RollerBL, SpeedController * RollerBR);
+	ShooterBelts ( SpeedController * RollerBL, SpeedController * RollerBR );
 	~ShooterBelts ();
 
 	void SetMotors ( SpeedController * BeltBL, SpeedController * BeltBR );

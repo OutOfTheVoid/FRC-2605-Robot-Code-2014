@@ -6,6 +6,7 @@
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/CollectorArms.h"
 #include "SubSystems/ShooterBelts.h"
+#include "SubSystems/ShooterWinch.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -21,11 +22,14 @@
 #define T_ARM_LEFT_OUT - 0.93611
 #define T_ARM_RIGHT_OUT 1.16875
 
+#define T_ARM_LEFT_EMERGENCY_IN - 0.53611
+#define T_ARM_RIGHT_EMERGENCY_IN 0.66875
+
 class TeleopDriveBehavior : public Behavior
 {
 public:
 
-	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, CollectorArms * ArmSystem, ShooterBelts * Belts );
+	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, CollectorArms * ArmSystem, ShooterBelts * Belts, Joystick * CancelStick, ShooterWinch * Winch );
 	~TeleopDriveBehavior ();
 
 	void Start ();
@@ -47,6 +51,7 @@ private:
 
 	Joystick * StrafeStick;
 	Joystick * RotateStick;
+	Joystick * CancelStick;
 
 	ExponentialFilter * DriveVelocityRamp;
 	DeadbandFilter * JoystickDeadband;
@@ -63,6 +68,10 @@ private:
 	ShooterBelts * Belts;
 
 	bool Pickup;
+
+	// Winch
+
+	ShooterWinch * Winch;
 
 };
 

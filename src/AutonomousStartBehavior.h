@@ -3,6 +3,8 @@
 
 #include "SubSystems/CollectorArms.h"
 #include "SubSystems/ShooterWinch.h"
+#include "SubSystems/MecanumDrive.h"
+#include "SubSystems/ShooterBelts.h"
 
 #include "Behaviors/Behavior.h"
 
@@ -11,17 +13,17 @@
 #define A_ARM_LEFT_OUT - 0.67014
 #define A_ARM_RIGHT_OUT 0.23472
 
-#define WINCH_ARMOUT - 0.15
+#define WINCH_ARMOUT - 0.24
 
-#define WINCH_BALLDROP - 0.28
+#define WINCH_BALLDROP - 0.94
 
-#define WINCH_BALL_ANGLE - 0.08
+#define WINCH_BALL_ANGLE - 0.16
 
 class AutonomousStartBehavior : public Behavior
 {
 public:
 
-	AutonomousStartBehavior ( CollectorArms * Arms, ShooterWinch * Winch );
+	AutonomousStartBehavior ( CollectorArms * Arms, ShooterWinch * Winch, MecanumDrive * Drive, ShooterBelts * Belts );
 	~AutonomousStartBehavior ();
 
 	void Start ();
@@ -37,8 +39,10 @@ private:
 		STATE_START = 0,
 		STATE_ARML_OUT,
 		STATE_WINCH_ARMDEPLOY,
-		STATE_BALL_DEPLOY,
 		STATE_BALL_CLAMP,
+		STATE_WINCH_BALLDROP,
+		STATE_DRIVE_FORWARD,
+		STATE_SHOOT,
 		STATE_END,
 
 	} BehaviorState;
@@ -48,6 +52,8 @@ private:
 
 	CollectorArms * Arms;
 	ShooterWinch * Winch;
+	MecanumDrive * Drive;
+	ShooterBelts * Belts;
 
 	Logger * Log;
 
