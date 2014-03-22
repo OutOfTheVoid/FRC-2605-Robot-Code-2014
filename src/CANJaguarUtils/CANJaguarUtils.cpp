@@ -81,9 +81,7 @@ void CheckCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 	if ( Jag -> GetControlMode () != Conf.Mode )
 	{
 
-		printf ( "CAN_JAGUAR RECONFIGURATION\n" );
 		ConfigCANJaguar ( Jag, Conf );
-
 
 	}
 	

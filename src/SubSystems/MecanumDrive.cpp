@@ -112,10 +112,15 @@ void MecanumDrive :: PushTransform ()
 	if ( ! Enabled )
 	{
 		
-		MotorFL.Motor -> Set ( 0 );
+		/*MotorFL.Motor -> Set ( 0 );
 		MotorFR.Motor -> Set ( 0 );
 		MotorRL.Motor -> Set ( 0 );
-		MotorRR.Motor -> Set ( 0 );
+		MotorRR.Motor -> Set ( 0 );*/
+
+		MotorFL.Motor -> Disable ();
+		MotorFR.Motor -> Disable ();
+		MotorRL.Motor -> Disable ();
+		MotorRR.Motor -> Disable ();
 		
 		return;
 	

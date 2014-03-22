@@ -91,8 +91,11 @@ void ShooterBelts :: PushSpeeds ()
 	if ( ! Enabled )
 	{
 
-		RollerL.Motor -> Set ( 0 );
-		RollerR.Motor -> Set ( 0 );
+		/*RollerL.Motor -> Set ( 0 );
+		RollerR.Motor -> Set ( 0 );*/
+
+		RollerL.Motor -> Disable ();
+		RollerR.Motor -> Disable ();
 
 		return;
 

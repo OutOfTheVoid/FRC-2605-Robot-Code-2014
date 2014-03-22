@@ -43,4 +43,6 @@ private:
 
 };
 
+void SetLogLevel ( int l );
+
 #endif

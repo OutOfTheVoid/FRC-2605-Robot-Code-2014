@@ -15,7 +15,6 @@
 
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/ShooterBelts.h"
-#include "SubSystems/ShooterWinch.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -31,9 +30,7 @@
 
 #include "Behaviors/BehaviorController.h"
 
-#include "BallPickupBehavior.h"
 #include "TeleopDriveBehavior.h"
-#include "AutonomousStartBehavior.h"
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
@@ -62,14 +59,13 @@
 
 #define VISION_PRIORITY 102
 
-#define BELT_P 7.2000
-#define BELT_I 0.0500
-#define BELT_D 0.7000
+#define BELT_P 1.0000
+#define BELT_I 0.2500
+#define BELT_D 0.2900
 
 #define BELT_ENCODER_CODES_PER_REVOLUTION 2500
 
-#define BELT_SPEED_SCALE_OPEN 1
-#define BELT_SPEED_SCALE_CLOSED 2500
+#define BELT_SPEED_SCALE 2500
 
 #define ARM_P 0.0000
 #define ARM_I 0.0000
@@ -96,6 +92,8 @@ public:
 	void InitVision ();
 	void InitSensors ();
 	void InitDecorations ();
+	
+	void PeriodicCommon ();
 
 	void DisabledInit ();
 	void DisabledPeriodic ();
@@ -191,65 +189,44 @@ private:
 
 	// Shooter
 
-	CANJagConfigInfo ClosedLoopBeltConfig;
-	CANJagConfigInfo OpenLoopBeltConfig;
+	CANJagConfigInfo MasterBeltConfig;
+	CANJagConfigInfo SlaveBeltConfig;
 
 	AsynchCANJaguar * BeltL;
 	AsynchCANJaguar * BeltR;
+	AsynchCANJaguar * BeltLSlave;
+	AsynchCANJaguar * BeltRSlave;
 
 	ShooterBelts * Shooter;
 
 	DigitalInput * BallPositionSwitch;
-
-	// Wench
-
-	PICServo * WinchM;
-
-	ShooterWinch * Winch;
-
-	// Arms
-
-	CollectorArms * Arms;
-
-	PICServo * ArmL;
-	PICServo * ArmR;
-
-	// PIC-Servo
-
-	PICServoController * PICServoControl;
-
-	// TEST VARIABLES
-
-	bool LastPosSet;
-
-	// LED STUFF
-
-	LEDStrip * LEDs;
-
-	LEDStripAnimator * TestAnimation;
 
 	// Behaviors
 
 	BehaviorController * Behaviors;
 
 	TeleopDriveBehavior * TeleopDrive;
-	BallPickupBehavior * BallPickup;
-	AutonomousStartBehavior * AutonomousStart;
 
 	char * TELEOP_DRIVE_BEHAVIOR;
-	char * BALL_PICKUP_BEHAVIOR;
-	char * AUTONOMOUS_START_BEHAVIOR;
 
 	// Ball stuff
 
 	AnalogChannel * DistanceSensorAnalog;
 	IRDistanceSensor * BallSensor;
 
+	// Arms
+
+	CANJagConfigInfo ArmConfig;
+
+	AsynchCANJaguar * ArmL;
+
 	// TEST STUFF
 
 	uint8_t TestPeriodMode;
 
 	Logger * Log;
+
+	double LowestVoltage;
 
 };
 

@@ -38,6 +38,8 @@ CANJaguarServer :: CANJaguarServer ( bool DoBrownOutCheck, double BrownOutCheckI
 	// Array for Server Jaguar Information structures.
 	Jags = new Vector <ServerCanJagInfo> (); 
 
+	Log = Logger :: GetInstance ();
+
 };
 
 /**
@@ -123,6 +125,8 @@ void CANJaguarServer :: SetCANBusUpdateInterval ( double Interval )
 bool CANJaguarServer :: Start ()
 {
 
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer STARTING...\n" );
+
 	// Message Send Queue - A cross-thread command queue to direct the server thread.
 	MessageSendQueue = msgQCreate ( CANJAGSERVER_MESSAGEQUEUE_LENGTH, sizeof ( CANJagServerMessage * ), MSG_Q_FIFO );
 
@@ -175,6 +179,8 @@ bool CANJaguarServer :: Start ()
 
 	}
 
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer STARTED!\n" );
+
 	// Success!
 	Running = true;
 	SendError = false;
@@ -190,6 +196,8 @@ bool CANJaguarServer :: Start ()
 */
 void CANJaguarServer :: Stop ()
 {
+
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer STOPPING...\n" );
 
 	// Make sure no command call is waiting on a response. Protects the commanding thread from a deadlock.
 	semTake ( ResponseSemaphore, WAIT_FOREVER );
@@ -302,6 +310,8 @@ void CANJaguarServer :: Stop ()
 	ResponseSemaphore = NULL;
 
 	Running = false;
+
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer STOPPED!\n" );
 
 };
 
@@ -873,6 +883,8 @@ void CANJaguarServer :: RemoveJag ( CAN_ID ID )
 void CANJaguarServer :: RunLoop ()
 {
 
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer RUNLOOP ENTERED!\n" );
+
 	if ( MessageSendQueue == NULL )
 		return;
 
@@ -890,11 +902,15 @@ void CANJaguarServer :: RunLoop ()
 	double PreJagCheckTime = Timer :: GetPPCTimestamp () - JagCheckInterval;
 	double PreCANCheckTime = Timer :: GetPPCTimestamp () - CANUpdateInterval;
 
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer ENTERING MESSAGE LOOP\n" );
+
 	while ( true )
 	{
 
 		if ( msgQReceive ( MessageSendQueue, reinterpret_cast <char *> ( & Message ), sizeof ( CANJagServerMessage * ), ParseWait ) != ERROR )
 		{
+
+			Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer MESSAGE RECEIVED:\n" );
 
 			// CAN-Bus Update speed protection.
 			if ( CANUpdateInterval != 0 )
@@ -1030,6 +1046,8 @@ void CANJaguarServer :: RunLoop ()
 					// Add Jaguar
 					case SEND_MESSAGE_JAG_ADD:
 
+						Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ADDING JAGUAR:\n" );
+
 						// Retreive ADD_JAG Message.
 						AddCANJagMessage * AJMessage = reinterpret_cast <AddCANJagMessage *> ( Message -> Data );
 
@@ -1057,6 +1075,8 @@ void CANJaguarServer :: RunLoop ()
 
 								Conflict = true;
 
+								Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ADD_JAG_CONFLICT! (ID: %i)\n", AJMessage -> ID );
+
 								break;
 
 							}
@@ -1079,6 +1099,8 @@ void CANJaguarServer :: RunLoop ()
 
 							Jags -> Push ( NewJag );
 
+							Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ADDED! (ID: %i)\n", AJMessage -> ID );
+
 						}
 
 						delete AJMessage;
@@ -1089,6 +1111,8 @@ void CANJaguarServer :: RunLoop ()
 					// Config Jaguar
 					case SEND_MESSAGE_JAG_CONFIG:
 
+						Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer JAG_CONFIG\n" );
+
 						// Retreive JAG_CONFIG Message.
 						ConfigCANJagMessage * CJMessage = reinterpret_cast <ConfigCANJagMessage *> ( Message -> Data );
 
@@ -1096,19 +1120,27 @@ void CANJaguarServer :: RunLoop ()
 						if ( CJMessage == NULL )
 						{
 
+							Log -> Log ( Logger :: LOG_WARNING, "CANJaguarServer CJMESSAGE NULL\n" );
+
 							delete Message;
 							break;
 
 						}
 
+						Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer CONF ID: %i\n", CJMessage -> ID );
+
 						// Find the appropriate Jaguar and configure it.
 						for ( uint32_t i = 0; i < Jags -> GetLength (); i ++ )
 						{
 
+							Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer TEST #%i, ID: %i\n", i, CJMessage -> ID );
+
 							ServerCANJagInfo JagInfo = ( * Jags ) [ i ];
 
-							if ( JagInfo.ID == SJMessage -> ID )
+							if ( JagInfo.ID == CJMessage -> ID )
 							{
+
+								Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer CONFIGURING... (ID: %i)\n", CJMessage -> ID );
 
 								ConfigCANJaguar ( JagInfo.Jag, CJMessage -> Config );
 
@@ -1347,6 +1379,12 @@ void CANJaguarServer :: RunLoop ()
 						break;
 
 				}
+
+			}
+			else
+			{
+
+				Log -> Log ( Logger :: LOG_WARNING, "CANJaguarServer NULL MESSAGE\n" );
 
 			}
 

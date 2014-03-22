@@ -2,6 +2,7 @@
 #define SHS_2605_IR_DISTANCE_CONFIG
 
 #include "src/Config/ConfigSection.h"
+#include "IRDistanceSensor.h"
 
 class IRDistanceConfig : public ConfigSection
 {

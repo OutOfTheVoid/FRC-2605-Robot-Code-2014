@@ -4,9 +4,7 @@
 #include "Behaviors/Behavior.h"
 
 #include "SubSystems/MecanumDrive.h"
-#include "SubSystems/CollectorArms.h"
 #include "SubSystems/ShooterBelts.h"
-#include "SubSystems/ShooterWinch.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -29,7 +27,7 @@ class TeleopDriveBehavior : public Behavior
 {
 public:
 
-	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, CollectorArms * ArmSystem, ShooterBelts * Belts, Joystick * CancelStick, ShooterWinch * Winch );
+	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, ShooterBelts * Belts, Joystick * CancelStick );
 	~TeleopDriveBehavior ();
 
 	void Start ();
@@ -42,7 +40,6 @@ public:
 private:
 
 	void ControlDrive ();
-	void ControlArms ();
 	void ControlBelts ();
 
 	// Drive
@@ -59,19 +56,11 @@ private:
 	Delegate <void> * OnShift;
 	NumericStepper * Gear;
 
-	// Arms
-
-	CollectorArms * Arms;
-
 	// Belts
 
 	ShooterBelts * Belts;
 
 	bool Pickup;
-
-	// Winch
-
-	ShooterWinch * Winch;
 
 };
 

@@ -1,8 +1,6 @@
 #ifndef SHS_2605_CONFIG_SECTION_H
 #define SHS_2605_CONFIG_SECTION_H
 
-#include "ConfigFile.h"
-
 #include "Jansson/jansson.h"
 
 class ConfigSection

@@ -2,8 +2,9 @@
 
 Robot :: Robot ():
 	WheelConfig (),
-	ClosedLoopBeltConfig (),
-	OpenLoopBeltConfig ()
+	MasterBeltConfig (),
+	SlaveBeltConfig (),
+	ArmConfig ()
 {
 
 	Log = Logger :: GetInstance ();
@@ -22,13 +23,12 @@ Robot :: Robot ():
 	InitBehaviors ();
 	InitDecorations ();
 
-	Winch -> SetZero ();
-	Arms -> SetZeros ();
-
 	TestCount = 0;
 	AutoCount = 0;
 	TeleCount = 0;
 	DisbCount = 0;
+
+	//SetPeriod ( 0.02 );
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Started **\n" );
 
@@ -52,7 +52,7 @@ void Robot :: InitSensors ()
 
 	Log -> Log ( Logger :: LOG_EVENT, "Initializing Sensors\n" );
 
-	DistanceSensorAnalog = new AnalogChannel ( 1, 6 );
+	DistanceSensorAnalog = new AnalogChannel ( 1, 2 );
 	BallSensor = new IRDistanceSensor ( DistanceSensorAnalog );
 
 	BallPositionSwitch = new DigitalInput ( 4 );
@@ -63,8 +63,6 @@ void Robot :: InitControls ()
 {
 
 	Log -> Log ( Logger :: LOG_EVENT, "Initializing Controls\n" );
-
-	printf ( "INIT CONTROLS\n" );
 
 	StrafeStick = new Joystick ( 1 );
 	RotateStick = new Joystick ( 2 );
@@ -86,14 +84,11 @@ void Robot :: InitMotors ()
 
 	Log -> Log ( Logger :: LOG_EVENT, "Initializing Motors\n" );
 
-	// PICServo Controller
-
-	PICServoControl = new PICServoController ();
-
 	// CANJaguar Server
 
 	JagServer = new CANJaguarServer ();
 	JagServer -> Start ();
+	//JagServer -> SetJagCheckInterval ( 0.01 );
 
 	// DRIVE
 
@@ -110,7 +105,7 @@ void Robot :: InitMotors ()
 	WheelFL = new AsynchCANJaguar ( JagServer, 7, WheelConfig );
 	WheelFR = new AsynchCANJaguar ( JagServer, 1, WheelConfig );
 	WheelRL = new AsynchCANJaguar ( JagServer, 5, WheelConfig );
-	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig ); 
+	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig );
 
 	Drive = new MecanumDrive ( WheelFL, WheelFR, WheelRL, WheelRR );
 
@@ -122,66 +117,45 @@ void Robot :: InitMotors ()
 
 	// BELTS
 
-	ClosedLoopBeltConfig.Mode = CANJaguar :: kSpeed;
-	ClosedLoopBeltConfig.P = BELT_P;
-	ClosedLoopBeltConfig.I = BELT_I;
-	ClosedLoopBeltConfig.D = BELT_D;
-	ClosedLoopBeltConfig.EncoderLinesPerRev = BELT_ENCODER_CODES_PER_REVOLUTION;
-	ClosedLoopBeltConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
-	ClosedLoopBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
-	ClosedLoopBeltConfig.MaxVoltage = 14;
-	ClosedLoopBeltConfig.FaultTime = 0.51;
+	MasterBeltConfig.Mode = CANJaguar :: kSpeed;
+	MasterBeltConfig.P = BELT_P;
+	MasterBeltConfig.I = BELT_I;
+	MasterBeltConfig.D = BELT_D;
+	MasterBeltConfig.EncoderLinesPerRev = BELT_ENCODER_CODES_PER_REVOLUTION;
+	MasterBeltConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
+	MasterBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	MasterBeltConfig.MaxVoltage = 14;
+	MasterBeltConfig.FaultTime = 0.51;
 
-	OpenLoopBeltConfig.Mode = CANJaguar :: kPercentVbus;
-	OpenLoopBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
-	OpenLoopBeltConfig.MaxVoltage = 14;
-	OpenLoopBeltConfig.FaultTime = 0.51;
+	SlaveBeltConfig.Mode = CANJaguar :: kVoltage;
+	SlaveBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	SlaveBeltConfig.MaxVoltage = 14;
+	SlaveBeltConfig.FaultTime = 0.51;
 
-	BeltL = new AsynchCANJaguar ( JagServer, 8, OpenLoopBeltConfig );
-	BeltR = new AsynchCANJaguar ( JagServer, 6, OpenLoopBeltConfig );
+	BeltL = new AsynchCANJaguar ( JagServer, 8, MasterBeltConfig );
+	BeltR = new AsynchCANJaguar ( JagServer, 6, MasterBeltConfig );
+	BeltLSlave = new AsynchCANJaguar ( JagServer, 10, SlaveBeltConfig );
+	BeltRSlave = new AsynchCANJaguar ( JagServer, 11, SlaveBeltConfig );
 
 	Shooter = new ShooterBelts ( BeltL, BeltR );
 
-	Shooter -> SetMotorScale ( BELT_SPEED_SCALE_CLOSED );
-	Shooter -> SetInverted ( false, true );	
+	Shooter -> SetMotorScale ( BELT_SPEED_SCALE );
+	Shooter -> SetInverted ( false, true );
 
-	// ARMS/WINCH
+	ArmConfig.Mode = CANJaguar :: kPosition;
+	ArmConfig.P = 500.0;
+	ArmConfig.I = 0;
+	ArmConfig.D = 0;
+	ArmConfig.PotentiometerTurnsPerRev = 10;
+	ArmConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
+	ArmConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	ArmConfig.MaxVoltage = 14;
+	ArmConfig.FaultTime = 0.51;
+	ArmConfig.LowPosLimit = 0;
+	ArmConfig.HighPosLimit = 10;
+	ArmConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
 
-	Wait ( 3.0 );
-	Log -> Log ( Logger :: LOG_EVENT, "Initializing PIC-Servos\n" );
-
-	PICServoControl -> AddPICServo ( 1, false, 3, 4 );
-	PICServoControl -> AddPICServo ( 3, false, 4, 3 );
-	PICServoControl -> AddPICServo ( 4, false, 9, 5 );
-
-	ArmL = PICServoControl -> GetModule ( 4 );
-
-	ArmL -> SetEncoderResolution ( 360 * 4 );
-	ArmL -> SetPID ( 0.5, 0.001, 0.05, 0.65 );
-	ArmL -> ConfigVelocity ( 0.8 );
-	ArmL -> ConfigAcceleration ( 0.1 );
-
-	ArmR = PICServoControl -> GetModule ( 3 );
-
-	ArmR -> SetEncoderResolution ( 360 * 4 );
-	ArmR -> SetPID ( 0.3, 0.001, 0.025, 0.65 );
-	ArmR -> ConfigVelocity ( 1.0 );
-	ArmR -> ConfigAcceleration ( 0.1 );
-
-	Arms = new CollectorArms ( ArmL, ArmR );
-
-	Arms -> SetInverted ( false, false );
-
-	// WINCH
-
-	WinchM = PICServoControl -> GetModule ( 1 );
-
-	WinchM -> SetEncoderResolution ( 1000 );
-	WinchM -> SetPID ( 0.9, 0, 0.3, 1.0, 0.25 );
-	WinchM -> ConfigAcceleration ( 0.3258789 );
-	WinchM -> ConfigVelocity ( 5.0 );
-
-	Winch = new ShooterWinch ( WinchM );
+	ArmL = new AsynchCANJaguar ( JagServer, 3, ArmConfig );
 
 };
 
@@ -193,17 +167,9 @@ void Robot :: InitBehaviors ()
 	Behaviors = new BehaviorController ();
 
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
-	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Arms, Shooter, CancelStick, Winch );
-
-	BALL_PICKUP_BEHAVIOR = "BallPickup";
-	BallPickup = new BallPickupBehavior ( Shooter, Arms, Drive, GearStepper, OnShiftDelegate, BallSensor, BallPositionSwitch );
-
-	AUTONOMOUS_START_BEHAVIOR = "AutonomousStart";
-	AutonomousStart = new AutonomousStartBehavior ( Arms, Winch, Drive, Shooter );
+	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Shooter, CancelStick );
 
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
-	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
-	Behaviors -> AddBehavior ( AUTONOMOUS_START_BEHAVIOR, AutonomousStart );
 
 };
 
@@ -315,6 +281,23 @@ void Robot :: VisionTaskRoutine ()
 };
 
 //============================================================//
+//==========================[COMMON]==========================//
+//============================================================//
+
+void Robot :: PeriodicCommon ()
+{
+
+	if ( IsEnabled () )
+	{
+
+		BeltLSlave -> Set ( BeltL -> GetOutputVoltage () * ( ( BeltL -> Get () > 0 ) ? 1 : - 1 ) );
+		BeltRSlave -> Set ( BeltR -> GetOutputVoltage () * ( ( BeltR -> Get () > 0 ) ? 1 : - 1 ) );
+
+	}
+
+};
+
+//============================================================//
 /*========================[AUTONOMOUS]========================*/
 //============================================================//
 
@@ -329,12 +312,12 @@ void Robot :: AutonomousInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Autonomous" );
 	DsLcd -> UpdateLCD ();
 
-	Behaviors -> StartBehavior ( AUTONOMOUS_START_BEHAVIOR );
-
 	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );
 
 	GearStepper -> Set ( 2 );
 	OnShift ();
+
+	ArmL -> Enable ( 0 );
 
 };
 
@@ -343,17 +326,20 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	Log -> Log ( Logger :: LOG_DEBUG3, "BEHAVIOR_UPDATE!\n" );
-	Behaviors -> Update ();
+	//Behaviors -> Update ();
+
+	ArmL -> Set ( 5.0 );
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Arm Left Position: %f\n", ArmL -> GetPosition () );
+
+	PeriodicCommon ();
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	Winch -> Disable ();
-
-	Behaviors -> StopBehavior ( AUTONOMOUS_START_BEHAVIOR );
+	ArmL -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
@@ -384,6 +370,8 @@ void Robot :: TeleopInit ()
 
 	TeleopTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
 
+	LowestVoltage = 14.0;
+
 };
 
 void Robot :: TeleopPeriodic ()
@@ -393,36 +381,10 @@ void Robot :: TeleopPeriodic ()
 
 	Behaviors -> Update ();
 
-	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
-	{
+	if ( m_ds -> GetBatteryVoltage () < LowestVoltage )
+		LowestVoltage = m_ds -> GetBatteryVoltage ();
 
-		Log -> Log ( Logger :: LOG_DEBUG2, "Arm right: %f\n", ArmR -> GetPosition () );
-
-		if ( TeleopDrive -> DoPickup () )
-		{
-
-			Log -> Log ( Logger :: LOG_DEBUG, "Switching to BallPickup\n" );
-
-			Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
-			Behaviors -> StartBehavior ( BALL_PICKUP_BEHAVIOR );
-
-		}
-
-	}
-	else if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
-	{
-
-		if ( BallPickup -> IsDone () || CancelStick -> GetRawButton ( 2 ) )
-		{
-
-			Log -> Log ( Logger :: LOG_DEBUG, "Switching to TeleopDrive\n" );
-
-			Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
-			Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
-
-		}
-
-	}
+	PeriodicCommon ();
 
 };
 
@@ -434,15 +396,14 @@ void Robot :: TeleopEnd ()
 	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
 		Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
-	if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
-		Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
-
 	DsLcd -> UpdateLCD ();
 
 	TeleopTask -> Stop ();
 
 	Drive -> Disable ();
 	Shooter -> Disable ();
+
+	Log -> Log ( Logger :: LOG_EVENT, "Lowest voltage for Teleop Run: %f\n", LowestVoltage );
 
 };
 
@@ -529,6 +490,8 @@ void Robot :: TestPeriodic ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "X: %f", BallSensor -> Get () );
 	DsLcd -> UpdateLCD ();
 
+	PeriodicCommon ();
+
 };
 
 void Robot :: TestEnd ()
@@ -580,6 +543,12 @@ void Robot :: DisabledInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Disabled\n" );
 	DsLcd -> UpdateLCD ();
 
+	Shooter -> Disable ();
+	Drive -> Disable ();
+
+	BeltLSlave -> Disable ();
+	BeltRSlave -> Disable ();
+
 };
 
 void Robot :: DisabledPeriodic ()
@@ -587,16 +556,7 @@ void Robot :: DisabledPeriodic ()
 
 	DisbCount ++;
 
-	/*LEDs -> SetPixelColor ( ( DisbCount + 0 ) % 7, 0xFF0000 );
-	LEDs -> SetPixelColor ( ( DisbCount + 1 ) % 7, 0x00FF00 );
-	LEDs -> SetPixelColor ( ( DisbCount + 2 ) % 7, 0x0000FF );
-	LEDs -> SetPixelColor ( ( DisbCount + 3 ) % 7, 0xFFFF00 );
-	LEDs -> SetPixelColor ( ( DisbCount + 4 ) % 7, 0xFF00FF );
-	LEDs -> SetPixelColor ( ( DisbCount + 5 ) % 7, 0x00FFFF );
-	LEDs -> SetPixelColor ( ( DisbCount + 6 ) % 7, 0xFFFFFF );*/
-	//LEDs -> PushColors ();
-
-	//Arms -> CalibratePICServoAnalogs ();
+	PeriodicCommon ();
 
 };
 

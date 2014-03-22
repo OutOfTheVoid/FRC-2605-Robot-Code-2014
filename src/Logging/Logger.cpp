@@ -84,3 +84,29 @@ void Logger :: ForcedLog ( const char * Format, ... )
 	semGive ( PrintSynchSemaphore );
 
 };
+
+void SetLogLevel ( int Level )
+{
+
+	switch ( Level )
+	{
+
+	case 0:
+		Logger :: GetInstance () -> SetPrintLevel ( Logger :: LOG_EVENT );
+		break;
+
+	case 1:
+		Logger :: GetInstance () -> SetPrintLevel ( Logger :: LOG_DEBUG );
+		break;
+
+	case 2:
+		Logger :: GetInstance () -> SetPrintLevel ( Logger :: LOG_DEBUG2 );
+		break;
+
+	case 3:
+		Logger :: GetInstance () -> SetPrintLevel ( Logger :: LOG_DEBUG3 );
+		break;
+
+	}
+
+};

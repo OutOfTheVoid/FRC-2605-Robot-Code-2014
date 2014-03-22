@@ -9,6 +9,7 @@
 #include "WPILib.h"
 #include "src/CANJaguarUtils/CANJaguarUtils.h"
 #include "src/Util/Vector.h"
+#include "src/Logging/Logger.h"
 
 #define CANJAGSERVER_PARSE_TIMEOUT_DEFAULT 100
 #define CANJAGSERVER_COMMAND_TIMEOUT_DEFAULT 200
@@ -166,6 +167,8 @@ private:
 	Vector <ServerCanJagInfo> * Jags;
 
 	static void _StartServerTask ( CANJaguarServer * Server );
+
+	Logger * Log;
 
 };
 

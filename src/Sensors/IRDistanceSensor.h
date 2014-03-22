@@ -13,6 +13,8 @@ class IRDistanceSensor : AnalogSensor
 {
 public:
 
+	friend class IRDistanceConfig;
+
 	typedef enum
 	{
 
