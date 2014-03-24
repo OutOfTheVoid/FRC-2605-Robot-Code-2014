@@ -38,6 +38,8 @@ typedef struct CANJagConfigInfo
 	bool Safety;
 
 	double FaultTime;
+
+	double VRamp;
 	
 } CANJagConfigInfo;
 

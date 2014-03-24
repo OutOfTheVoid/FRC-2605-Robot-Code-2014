@@ -27,7 +27,7 @@ class TeleopDriveBehavior : public Behavior
 {
 public:
 
-	TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, ShooterBelts * Belts, Joystick * CancelStick );
+	TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts, Joystick * Strafe, Joystick * Rotate, Joystick * CancelStick, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate );
 	~TeleopDriveBehavior ();
 
 	void Start ();

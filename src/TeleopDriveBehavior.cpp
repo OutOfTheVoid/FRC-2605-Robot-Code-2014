@@ -1,6 +1,6 @@
 #include "TeleopDriveBehavior.h"
 
-TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * DriveSystem, Joystick * Strafe, Joystick * Rotate, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate, ShooterBelts * Belts, Joystick * Cancel )
+TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts8, Joystick * Strafe, Joystick * Rotate, Joystick * Cancel, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate )
 {
 
 	Drive = DriveSystem;

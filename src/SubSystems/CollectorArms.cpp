@@ -1,44 +1,39 @@
 #include "CollectorArms.h"
 
-CollectorArms :: CollectorArms ( PICServo * ML, PICServo * MR )
+CollectorArms :: CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR )
 {
 
-	this -> ML = ML;
-	this -> MR = MR;
+	this -> ArmL = ArmL;
+	this -> ArmR = ArmR;
 
-	LInverted = false;
-	RInverted = false;
+	ZeroL = 0;
+	ZeroR = 0;
 
-	PreScale = 1;
+	InvertedL = false;
+	InvertedR = false;
 
 	Enabled = false;
-
-	FreePWM = 1.0;
-
-	Log = Logger :: GetInstance ();
 
 };
 
 CollectorArms :: ~CollectorArms ()
 {
+
+	if ( GetEnabled () )
+		Disable ();
+
 };
 
 bool CollectorArms :: Enable ()
 {
 
-	if ( ML == NULL || MR == NULL )
+	if ( ArmL == NULL || ArmR == NULL )
 		return false;
 
 	Enabled = true;
 
-	ML -> Enable ();
-	MR -> Enable ();
-
-	ML -> SetControlMode ( PICServo :: kPWM );
-	MR -> SetControlMode ( PICServo :: kPWM );
-
-	ML -> Set ( 0 );
-	ML -> Set ( 0 );
+	ArmL -> Enable ();
+	ArmR -> Enable ();
 
 	return true;
 
@@ -49,8 +44,8 @@ void CollectorArms :: Disable ()
 
 	Enabled = false;
 
-	ML -> Disable ();
-	MR -> Disable ();
+	ArmL -> Disable ();
+	ArmR -> Disable ();
 
 };
 
@@ -67,8 +62,8 @@ void CollectorArms :: SetInverted ( bool L, bool R )
 	if ( Enabled )
 		return;
 
-	LInverted = L;
-	RInverted = R;
+	InvertedL = L;
+	InvertedR = R;
 
 };
 
@@ -85,39 +80,27 @@ void CollectorArms :: SetPreScale ( double PreScale )
 void CollectorArms :: SetZeros ()
 {
 
-	ML -> ResetPosition ();
-	MR -> ResetPosition ();
+	ZeroL = ArmL -> GetPosition ();
+	ZeroR = ArmR -> GetPosition ();
 
 };
 
-void CollectorArms :: SetFreeDrivePower ( double Power )
+void CollectorArms :: DrivePositions ( double L, double R )
 {
 
-	if ( Enabled )
+	if ( ! Enabled )
 		return;
 
-	this -> FreePWM = Power;
-
-};
-
-bool CollectorArms :: DrivePositions ( double L, double R )
-{
-
-	ML -> SetControlMode ( PICServo :: kPosition );
-	MR -> SetControlMode ( PICServo :: kPosition );
-
-	ML -> Set ( L );
-	MR -> Set ( R );
-
-	return ML -> GetMoveDone () && MR-> GetMoveDone ();
+	ArmL -> Set ( ZeroL + ( L * ( InvertedL ? - 1.0 : 1.0 ) ) );
+	ArmR -> Set ( ZeroR + ( R * ( InvertedR ? - 1.0 : 1.0 ) ) );
 
 };
 
 bool CollectorArms :: ArmPositionsWithin ( double Threshold, double L, double R )
 {
 
-	double LD = fabs ( L - ML -> GetPosition () );
-	double RD = fabs ( R - MR -> GetPosition () );
+	double LD = fabs ( L - ( ArmL -> GetPosition () - ZeroL ) );
+	double RD = fabs ( R - ( ArmR -> GetPosition () - ZeroR ) );
 
 	Log -> Log ( Logger :: LOG_DEBUG, "Left diff: %f, Right diff: %f, Reached: %s\n", LD, RD, ( ( LD < Threshold ) && ( RD < Threshold ) ) ? "True" : "False" );
 
@@ -125,36 +108,11 @@ bool CollectorArms :: ArmPositionsWithin ( double Threshold, double L, double R 
 
 };
 
-void CollectorArms :: DrivePWM ( double Value )
-{
-
-	ML -> SetControlMode ( PICServo :: kPWM );
-	MR -> SetControlMode ( PICServo :: kPWM );
-
-	MR -> Set ( Value );
-	ML -> Set ( Value );
-
-};
-
 void CollectorArms :: Stop ()
 {
 
 	
-	MR -> SetControlMode ( PICServo :: kPWM );
-	ML -> SetControlMode ( PICServo :: kPWM );
-
-	MR -> Set ( 0 );
-	ML -> Set ( 0 );
-
-};
-
-void CollectorArms :: CalibratePICServoAnalogs ()
-{
-
-	if ( Enabled )
-		return;
-
-	ML -> CalibrateAnalog ();
-	MR -> CalibrateAnalog ();
+	ArmL -> Set ( ArmL -> GetPosition () );
+	ArmR -> Set ( ArmR -> GetPosition () );
 
 };

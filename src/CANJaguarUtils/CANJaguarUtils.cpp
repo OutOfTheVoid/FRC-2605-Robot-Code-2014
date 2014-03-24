@@ -18,6 +18,8 @@ CANJagConfigInfo :: CANJagConfigInfo ()
 	
 	FaultTime = 1.0;
 
+	VRamp = 190.476190476;
+
 };
 
 void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
@@ -71,6 +73,7 @@ void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 	Jag -> ConfigMaxOutputVoltage ( Conf.MaxVoltage );
 	Jag -> ConfigNeutralMode ( Conf.NeutralAction );
 	Jag -> SetSafetyEnabled ( Conf.Safety );
+	Jag -> SetVoltageRampRate ( Conf.VRamp );
 	Jag -> EnableControl ();
 	
 };

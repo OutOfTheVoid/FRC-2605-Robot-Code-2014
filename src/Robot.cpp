@@ -137,10 +137,10 @@ void Robot :: InitMotors ()
 	BeltLSlave = new AsynchCANJaguar ( JagServer, 10, SlaveBeltConfig );
 	BeltRSlave = new AsynchCANJaguar ( JagServer, 11, SlaveBeltConfig );
 
-	Shooter = new ShooterBelts ( BeltL, BeltR );
+	Belts = new ShooterBelts ( BeltL, BeltR );
 
-	Shooter -> SetMotorScale ( BELT_SPEED_SCALE );
-	Shooter -> SetInverted ( false, true );
+	Belts -> SetMotorScale ( BELT_SPEED_SCALE );
+	Belts -> SetInverted ( true, false );
 
 	ArmConfig.Mode = CANJaguar :: kPosition;
 	ArmConfig.P = 500.0;
@@ -151,11 +151,12 @@ void Robot :: InitMotors ()
 	ArmConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
 	ArmConfig.MaxVoltage = 14;
 	ArmConfig.FaultTime = 0.51;
-	ArmConfig.LowPosLimit = 0;
-	ArmConfig.HighPosLimit = 10;
+	ArmConfig.LowPosLimit = 0.5;
+	ArmConfig.HighPosLimit = 9.5;
 	ArmConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
 
 	ArmL = new AsynchCANJaguar ( JagServer, 3, ArmConfig );
+	ArmR = new AsynchCANJaguar ( JagServer, 4, ArmConfig );
 
 };
 
@@ -167,7 +168,7 @@ void Robot :: InitBehaviors ()
 	Behaviors = new BehaviorController ();
 
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
-	TeleopDrive = new TeleopDriveBehavior ( Drive, StrafeStick, RotateStick, GearStepper, OnShiftDelegate, Shooter, CancelStick );
+	TeleopDrive = new TeleopDriveBehavior ( Drive, Belts, StrafeStick, RotateStick, CancelStick, GearStepper, OnShiftDelegate );
 
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 
@@ -401,7 +402,7 @@ void Robot :: TeleopEnd ()
 	TeleopTask -> Stop ();
 
 	Drive -> Disable ();
-	Shooter -> Disable ();
+	Belts -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "Lowest voltage for Teleop Run: %f\n", LowestVoltage );
 
@@ -543,7 +544,7 @@ void Robot :: DisabledInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Disabled\n" );
 	DsLcd -> UpdateLCD ();
 
-	Shooter -> Disable ();
+	Belts -> Disable ();
 	Drive -> Disable ();
 
 	BeltLSlave -> Disable ();

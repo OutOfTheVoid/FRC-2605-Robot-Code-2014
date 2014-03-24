@@ -1,7 +1,7 @@
 #ifndef SHS_2605_COLLECTOR_ARMS_H
 #define SHS_2605_COLLECTOR_ARMS_H
 
-#include "src/PIC-Servo/PICServo.h"
+#include "src/CANJagServer/AsynchCANJaguar.h"
 
 #include "src/Logging/Logger.h"
 
@@ -11,7 +11,7 @@ class CollectorArms
 {
 public:
 
-	CollectorArms ( PICServo * ML, PICServo * MR );
+	CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR );
 	~CollectorArms ();
 
 	bool Enable ();
@@ -23,40 +23,23 @@ public:
 
 	void SetZeros ();
 
-	bool DrivePositions ( double L, double R );
-
-	void SetFreeDrivePower ( double Power );
-	void DrivePWM ( double Value );
+	void DrivePositions ( double L, double R );
 
 	bool ArmPositionsWithin ( double Threshold, double L, double R );
 
 	void Stop ();
 
-	void CalibratePICServoAnalogs ();
-
-	typedef enum 
-	{
-
-		ARMS_OFF,
-		ARMS_BEGIN_1,
-		ARMS_BEGIN_2,
-		ARMS_OPEN,
-		ARMS_CLOSED,
-
-	} ArmsPreset;
-
 private:
 
-	PICServo * ML;
-	PICServo * MR;
+	AsynchCANJaguar * ArmL, * ArmR;
 
 	double PreScale;
 
-	double FreePWM;
+	double ZeroL, ZeroR;
 
 	bool Enabled;
 
-	bool LInverted, RInverted;
+	bool InvertedL, InvertedR;
 
 	Logger * Log;
 

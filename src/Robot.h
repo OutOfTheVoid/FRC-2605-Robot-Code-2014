@@ -197,7 +197,7 @@ private:
 	AsynchCANJaguar * BeltLSlave;
 	AsynchCANJaguar * BeltRSlave;
 
-	ShooterBelts * Shooter;
+	ShooterBelts * Belts;
 
 	DigitalInput * BallPositionSwitch;
 
@@ -219,6 +219,7 @@ private:
 	CANJagConfigInfo ArmConfig;
 
 	AsynchCANJaguar * ArmL;
+	AsynchCANJaguar * ArmR;
 
 	// TEST STUFF
 
