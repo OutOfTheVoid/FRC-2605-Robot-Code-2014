@@ -1,9 +1,7 @@
 #include "TeleopDriveBehavior.h"
 
-TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts8, Joystick * Strafe, Joystick * Rotate, Joystick * Cancel, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate )
+TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * Drive, ShooterBelts * Belts, CollectorArms * Arms, Joystick * Strafe, Joystick * Rotate, Joystick * Cancel, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate )
 {
-
-	Drive = DriveSystem;
 
 	StrafeStick = Strafe;
 	RotateStick = Rotate;
@@ -16,6 +14,8 @@ TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * DriveSystem, Shooter
 	OnShift = OnShiftDelegate;
 
 	this -> Belts = Belts;
+	this -> Drive = Drive;
+	this -> Arms = Arms;
 
 };
 
@@ -36,10 +36,14 @@ void TeleopDriveBehavior :: Start ()
 	if ( ! Belts -> GetEnabled () )
 		Belts -> Enable ();
 
+	// if ( ! Arms -> GetEnabled () )
+	//	Arms -> Enable ();
+
 	Gear -> Set ( 1 );
 	OnShift -> Call ();
 
 	Pickup = false;
+	EmergenceyArms = false;
 
 };
 
@@ -56,6 +60,7 @@ void TeleopDriveBehavior :: Stop ()
 
 	Drive -> Disable ();
 	Belts -> Disable ();
+	Arms -> Disable ();
 
 };
 
@@ -102,9 +107,9 @@ void TeleopDriveBehavior :: ControlBelts ()
 	if ( RotateStick -> GetRawButton ( 1 ) )
 		Belts -> SetSpeed ( 0.99 );
 	else if ( RotateStick -> GetRawButton ( 3 ) )
-		Belts -> SetSpeed ( 0.1 );
+		Belts -> SetSpeed ( 0.07 );
 	else if ( RotateStick -> GetRawButton ( 2 ) )
-		Belts -> SetSpeed ( - 0.1 );
+		Belts -> SetSpeed ( - 0.07 );
 	else
 		Belts -> SetSpeed ( 0 );
 
@@ -112,9 +117,23 @@ void TeleopDriveBehavior :: ControlBelts ()
 
 };
 
+void TeleopDriveBehavior :: ControlArms ()
+{
+
+	//Arms -> DrivePositions ( StrafeStick -> GetZ () / 2, RotateStick -> GetZ () / 2 );
+
+};
+
 bool TeleopDriveBehavior :: DoPickup ()
 {
 
 	return Pickup;
+
+};
+
+bool TeleopDriveBehavior :: DoEmergenceyArms ()
+{
+
+	return EmergenceyArms;
 
 };

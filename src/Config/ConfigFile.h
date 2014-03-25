@@ -1,5 +1,5 @@
-#ifndef SHSConfigFile
-#define SHSConfigFile
+#ifndef SHS_2605_CONFIG_FILE
+#define SHS_2605_CONFIG_FILE
 
 #include "Jansson/jansson.h"
 

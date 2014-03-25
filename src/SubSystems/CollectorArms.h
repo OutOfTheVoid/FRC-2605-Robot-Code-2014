@@ -27,6 +27,9 @@ public:
 
 	bool ArmPositionsWithin ( double Threshold, double L, double R );
 
+	double GetPositionLeft ();
+	double GetPositionRight ();
+
 	void Stop ();
 
 private:

@@ -70,7 +70,7 @@ void BehaviorController :: StartBehavior ( const char * Name )
 			( * Behaviors ) [ Index ].Item -> Restart ();
 
 	}
-
+	
 };
 
 void BehaviorController :: StopBehavior ( const char * Name )

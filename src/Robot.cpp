@@ -8,7 +8,7 @@ Robot :: Robot ():
 {
 
 	Log = Logger :: GetInstance ();
-	Log -> SetPrintLevel ( Logger :: LOG_DEBUG );
+	Log -> SetPrintLevel ( Logger :: LOG_DEBUG2 );
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Starting **\n" );
 
@@ -27,8 +27,6 @@ Robot :: Robot ():
 	AutoCount = 0;
 	TeleCount = 0;
 	DisbCount = 0;
-
-	//SetPeriod ( 0.02 );
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Started **\n" );
 
@@ -104,7 +102,7 @@ void Robot :: InitMotors ()
 
 	WheelFL = new AsynchCANJaguar ( JagServer, 7, WheelConfig );
 	WheelFR = new AsynchCANJaguar ( JagServer, 1, WheelConfig );
-	WheelRL = new AsynchCANJaguar ( JagServer, 5, WheelConfig );
+	WheelRL = new AsynchCANJaguar ( JagServer, 6, WheelConfig );
 	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig );
 
 	Drive = new MecanumDrive ( WheelFL, WheelFR, WheelRL, WheelRR );
@@ -133,14 +131,14 @@ void Robot :: InitMotors ()
 	SlaveBeltConfig.FaultTime = 0.51;
 
 	BeltL = new AsynchCANJaguar ( JagServer, 8, MasterBeltConfig );
-	BeltR = new AsynchCANJaguar ( JagServer, 6, MasterBeltConfig );
+	BeltR = new AsynchCANJaguar ( JagServer, 5, MasterBeltConfig );
 	BeltLSlave = new AsynchCANJaguar ( JagServer, 10, SlaveBeltConfig );
 	BeltRSlave = new AsynchCANJaguar ( JagServer, 11, SlaveBeltConfig );
 
 	Belts = new ShooterBelts ( BeltL, BeltR );
 
 	Belts -> SetMotorScale ( BELT_SPEED_SCALE );
-	Belts -> SetInverted ( true, false );
+	Belts -> SetInverted ( false, true );
 
 	ArmConfig.Mode = CANJaguar :: kPosition;
 	ArmConfig.P = 500.0;
@@ -158,6 +156,11 @@ void Robot :: InitMotors ()
 	ArmL = new AsynchCANJaguar ( JagServer, 3, ArmConfig );
 	ArmR = new AsynchCANJaguar ( JagServer, 4, ArmConfig );
 
+	Arms = new CollectorArms ( ArmL, ArmR );
+	Arms -> SetPreScale ( 1.0 );
+	Arms -> SetInverted ( false, false );
+	Arms -> SetZeros ();
+
 };
 
 void Robot :: InitBehaviors ()
@@ -168,7 +171,7 @@ void Robot :: InitBehaviors ()
 	Behaviors = new BehaviorController ();
 
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
-	TeleopDrive = new TeleopDriveBehavior ( Drive, Belts, StrafeStick, RotateStick, CancelStick, GearStepper, OnShiftDelegate );
+	TeleopDrive = new TeleopDriveBehavior ( Drive, Belts, Arms, StrafeStick, RotateStick, CancelStick, GearStepper, OnShiftDelegate );
 
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 
@@ -318,8 +321,6 @@ void Robot :: AutonomousInit ()
 	GearStepper -> Set ( 2 );
 	OnShift ();
 
-	ArmL -> Enable ( 0 );
-
 };
 
 void Robot :: AutonomousPeriodic ()
@@ -329,18 +330,16 @@ void Robot :: AutonomousPeriodic ()
 
 	//Behaviors -> Update ();
 
-	ArmL -> Set ( 5.0 );
-
-	Log -> Log ( Logger :: LOG_DEBUG, "Arm Left Position: %f\n", ArmL -> GetPosition () );
-
 	PeriodicCommon ();
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f, Right: %f\n", Arms -> GetPositionLeft (), Arms -> GetPositionRight () );
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	ArmL -> Disable ();
+	Arms -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
@@ -363,15 +362,16 @@ void Robot :: TeleopInit ()
 	DisabledEnd ();
 	Mode = TeleopMode;
 
-	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );
-
+	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );		
+	
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
 
 	Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
-	TeleopTask -> Start ( reinterpret_cast <uint32_t> ( this ) );
-
 	LowestVoltage = 14.0;
+
+	Arms -> SetZeros ();
+	Arms -> Enable ();
 
 };
 
@@ -386,6 +386,8 @@ void Robot :: TeleopPeriodic ()
 		LowestVoltage = m_ds -> GetBatteryVoltage ();
 
 	PeriodicCommon ();
+
+	//Arms -> DrivePositions ( StrafeStick -> GetZ () / 4, RotateStick -> GetZ () / 4 );
 
 };
 
@@ -403,6 +405,8 @@ void Robot :: TeleopEnd ()
 
 	Drive -> Disable ();
 	Belts -> Disable ();
+
+	Arms -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "Lowest voltage for Teleop Run: %f\n", LowestVoltage );
 
@@ -599,4 +603,5 @@ int Robot :: VisionTaskStub ( Robot * This )
 
 };
 
-START_ROBOT_CLASS ( Robot )
+START_ROBOT_CLASS ( Robot );
+

@@ -6,13 +6,15 @@ CollectorArms :: CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR 
 	this -> ArmL = ArmL;
 	this -> ArmR = ArmR;
 
-	ZeroL = 0;
-	ZeroR = 0;
+	ZeroL = 0.0;
+	ZeroR = 0.0;
 
 	InvertedL = false;
 	InvertedR = false;
 
 	Enabled = false;
+
+	PreScale = 1.0;
 
 };
 
@@ -91,20 +93,34 @@ void CollectorArms :: DrivePositions ( double L, double R )
 	if ( ! Enabled )
 		return;
 
-	ArmL -> Set ( ZeroL + ( L * ( InvertedL ? - 1.0 : 1.0 ) ) );
-	ArmR -> Set ( ZeroR + ( R * ( InvertedR ? - 1.0 : 1.0 ) ) );
+	ArmL -> Set ( ZeroL + ( L * ( InvertedL ? - PreScale : PreScale ) ) );
+	ArmR -> Set ( ZeroR + ( R * ( InvertedR ? - PreScale : PreScale ) ) );
 
 };
 
 bool CollectorArms :: ArmPositionsWithin ( double Threshold, double L, double R )
 {
 
-	double LD = fabs ( L - ( ArmL -> GetPosition () - ZeroL ) );
-	double RD = fabs ( R - ( ArmR -> GetPosition () - ZeroR ) );
+	double LD = fabs ( L - ( ArmL -> GetPosition () - ZeroL ) / ( InvertedL ? - PreScale : PreScale ) );
+	double RD = fabs ( R - ( ArmR -> GetPosition () - ZeroR ) / ( InvertedR ? - PreScale : PreScale ) );
 
 	Log -> Log ( Logger :: LOG_DEBUG, "Left diff: %f, Right diff: %f, Reached: %s\n", LD, RD, ( ( LD < Threshold ) && ( RD < Threshold ) ) ? "True" : "False" );
 
 	return ( ( LD < Threshold ) && ( RD < Threshold ) );
+
+};
+
+double CollectorArms :: GetPositionLeft ()
+{
+
+	return ( ArmL -> GetPosition () - ZeroL ) / ( InvertedL ? - PreScale : PreScale );
+
+};
+
+double CollectorArms :: GetPositionRight ()
+{
+
+	return ( ArmR -> GetPosition () - ZeroR ) / ( InvertedR ? - PreScale : PreScale );
 
 };
 

@@ -15,6 +15,7 @@
 
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/ShooterBelts.h"
+#include "SubSystems/CollectorArms.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -220,6 +221,8 @@ private:
 
 	AsynchCANJaguar * ArmL;
 	AsynchCANJaguar * ArmR;
+
+	CollectorArms * Arms;
 
 	// TEST STUFF
 

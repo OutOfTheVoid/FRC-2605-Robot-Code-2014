@@ -5,6 +5,7 @@
 
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/ShooterBelts.h"
+#include "SubSystems/Col.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -17,17 +18,24 @@
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
-#define T_ARM_LEFT_OUT - 0.93611
-#define T_ARM_RIGHT_OUT 1.16875
-
-#define T_ARM_LEFT_EMERGENCY_IN - 0.53611
-#define T_ARM_RIGHT_EMERGENCY_IN 0.66875
+/*
+* TELEOP DRIVE BEHAVIOR:
+*
+* Defacto Teleoperated control behavior. Assumes at start that the robot's systems it uses are disabled, and on start enables them, giving appropriate control with every update.
+*
+* This behavior has flags for:
+* - doing the automated pickup behavior ( bool DoPickup () )
+* - doing the emergencey arms behavior ( bool DoEmergenceyArms () )
+*
+* INPUT: Strafe Joystick, Rotate Joystick, Cancel Joystick
+* OUTPUT: Drive, Belts, Arms
+*/
 
 class TeleopDriveBehavior : public Behavior
 {
 public:
 
-	TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts, Joystick * Strafe, Joystick * Rotate, Joystick * CancelStick, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate );
+	TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts, CollectorArms * Arms, Joystick * Strafe, Joystick * Rotate, Joystick * CancelStick, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate );
 	~TeleopDriveBehavior ();
 
 	void Start ();
@@ -36,11 +44,13 @@ public:
 	void Restart ();
 
 	bool DoPickup ();
+	bool DoEmergenceyArms ();
 
 private:
 
 	void ControlDrive ();
 	void ControlBelts ();
+	void ControlArms ();
 
 	// Drive
 
@@ -60,7 +70,14 @@ private:
 
 	ShooterBelts * Belts;
 
+	// Arms
+
+	CollectorArms * Arms;
+
+	// Flags
+
 	bool Pickup;
+	bool EmergenceyArms;
 
 };
 

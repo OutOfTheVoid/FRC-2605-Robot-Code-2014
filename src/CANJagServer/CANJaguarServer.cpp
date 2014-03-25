@@ -899,6 +899,8 @@ void CANJaguarServer :: RunLoop ()
 	bool Conflict = false;
 	CANJagServerMessage * SendMessage;
 
+	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer TIME_MARK\n" );
+
 	double PreJagCheckTime = Timer :: GetPPCTimestamp () - JagCheckInterval;
 	double PreCANCheckTime = Timer :: GetPPCTimestamp () - CANUpdateInterval;
 
@@ -906,6 +908,8 @@ void CANJaguarServer :: RunLoop ()
 
 	while ( true )
 	{
+
+		Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer MSG_GET\n" );
 
 		if ( msgQReceive ( MessageSendQueue, reinterpret_cast <char *> ( & Message ), sizeof ( CANJagServerMessage * ), ParseWait ) != ERROR )
 		{
@@ -1389,6 +1393,8 @@ void CANJaguarServer :: RunLoop ()
 			}
 
 		}
+		else if ( errno != S_objLib_OBJ_TIMEOUT )
+			Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer MESSAGE RECEIVE FAILURE\n" );
 
 		// Get time passed since last brown-out check.
 		double CheckTime = Timer :: GetPPCTimestamp ();
