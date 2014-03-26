@@ -1,7 +1,9 @@
 #ifndef SHS_2605_WENCH_H
 #define SHS_2605_WENCH_H
 
-#include "src/PIC-Servo/PICServo.h"
+#include "src/CANJagServer/AsynchCANJaguar.h"
+
+#include "src/CANJaguarUtils/CANJaguarUtils.h"
 
 #include <cmath>
 
@@ -9,7 +11,7 @@ class ShooterWinch
 {
 public:
 
-	ShooterWinch ( PICServo * WinchServo );
+	ShooterWinch ( AsynchCANJaguar * Motor, CANJagConfigInfo ServoConfig, CANJagConfigInfo OpenConfig );
 	~ShooterWinch ();
 
 	bool Enable ();
@@ -17,23 +19,26 @@ public:
 	bool GetEnabled ();
 
 	void SetInverted ( bool Inverted );
+	void SetPreScale ( double PreScale );
 
 	void SetZero ();
 
-	bool WithinAngle ( double Threshold, double Angle );
-
 	double GetAngle ();
 
-	bool DriveAngle ( double Angle );
-	void DrivePWM ( double Value );
-
+	bool WithinAngle ( double Threshold, double Angle );
+	void DriveAngle ( double Angle );
 	void Stop ();
 
 private:
 
 	bool Inverted;
 
-	PICServo * M;
+	AsynchCANJaguar * M;
+
+	CANJagConfigInfo ServoConfig, OpenConfig;
+
+	double Zero;
+	double PreScale;
 
 	bool Enabled;
 

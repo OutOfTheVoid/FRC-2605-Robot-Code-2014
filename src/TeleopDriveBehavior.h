@@ -6,6 +6,7 @@
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/ShooterBelts.h"
 #include "SubSystems/CollectorArms.h"
+#include "SubSystems/ShooterWinch.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -35,7 +36,7 @@ class TeleopDriveBehavior : public Behavior
 {
 public:
 
-	TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts, CollectorArms * Arms, Joystick * Strafe, Joystick * Rotate, Joystick * CancelStick, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate );
+	TeleopDriveBehavior ( MecanumDrive * DriveSystem, ShooterBelts * Belts, CollectorArms * Arms, ShooterWinch * Winch, Joystick * Strafe, Joystick * Rotate, Joystick * CancelStick, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate );
 	~TeleopDriveBehavior ();
 
 	void Start ();
@@ -51,6 +52,7 @@ private:
 	void ControlDrive ();
 	void ControlBelts ();
 	void ControlArms ();
+	void ControlWinch ();
 
 	// Drive
 
@@ -73,6 +75,10 @@ private:
 	// Arms
 
 	CollectorArms * Arms;
+
+	// Winch
+
+	ShooterWinch * Winch;
 
 	// Flags
 

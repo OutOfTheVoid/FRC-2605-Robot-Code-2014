@@ -1,6 +1,6 @@
 #include "TeleopDriveBehavior.h"
 
-TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * Drive, ShooterBelts * Belts, CollectorArms * Arms, Joystick * Strafe, Joystick * Rotate, Joystick * Cancel, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate )
+TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * Drive, ShooterBelts * Belts, CollectorArms * Arms, ShooterWinch * Winch, Joystick * Strafe, Joystick * Rotate, Joystick * Cancel, NumericStepper * GearStepper, Delegate <void> * OnShiftDelegate )
 {
 
 	StrafeStick = Strafe;
@@ -16,6 +16,7 @@ TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * Drive, ShooterBelts 
 	this -> Belts = Belts;
 	this -> Drive = Drive;
 	this -> Arms = Arms;
+	this -> Winch = Winch;
 
 };
 
@@ -39,6 +40,9 @@ void TeleopDriveBehavior :: Start ()
 	if ( ! Arms -> GetEnabled () )
 		Arms -> Enable ();
 
+	if ( ! Winch -> GetEnabled () )
+		Winch -> Enable ();
+
 	Gear -> Set ( 1 );
 	OnShift -> Call ();
 
@@ -53,6 +57,7 @@ void TeleopDriveBehavior :: Update ()
 	ControlDrive ();
 	ControlBelts ();
 	ControlArms ();
+	ControlWinch ();
 
 };
 
@@ -62,6 +67,7 @@ void TeleopDriveBehavior :: Stop ()
 	Drive -> Disable ();
 	Belts -> Disable ();
 	Arms -> Disable ();
+	Winch -> Disable ();
 
 };
 
@@ -119,6 +125,13 @@ void TeleopDriveBehavior :: ControlArms ()
 {
 
 	Arms -> DrivePositions ( StrafeStick -> GetZ () / 2, RotateStick -> GetZ () / 2 );
+
+};
+
+void TeleopDriveBehavior :: ControlWinch ()
+{
+
+	Winch -> DriveAngle ( ( CancelStick -> GetZ () + 1 ) / 2 );
 
 };
 

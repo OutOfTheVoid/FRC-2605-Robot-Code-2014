@@ -1,12 +1,19 @@
 #include "ShooterWinch.h"
 
-ShooterWinch :: ShooterWinch ( PICServo * Motor )
+ShooterWinch :: ShooterWinch ( AsynchCANJaguar * Motor, CANJagConfigInfo ServoConfig, CANJagConfigInfo OpenConfig )
 {
 
 	M = Motor;
 
 	Inverted = false;
 	Enabled = false;
+
+	Zero = 0.0;
+
+	this -> ServoConfig = ServoConfig;
+	this -> OpenConfig = OpenConfig;
+
+	PreScale = 1.0;
 
 };
 
@@ -24,10 +31,20 @@ void ShooterWinch :: SetInverted ( bool Inverted )
 
 };
 
+void ShooterWinch :: SetPreScale ( double PreScale )
+{
+
+	if ( Enabled )
+		return;
+
+	this -> PreScale = PreScale;
+
+};
+
 void ShooterWinch :: SetZero ()
 {
 
-	M -> ResetPosition ();
+	Zero = M -> GetPosition ();
 
 };
 
@@ -37,6 +54,7 @@ bool ShooterWinch :: Enable ()
 	if ( M == NULL )
 		return false;
 
+	M -> Configure ( ServoConfig );
 	M -> Enable ();
 
 	Enabled = true;
@@ -51,6 +69,8 @@ void ShooterWinch :: Disable ()
 	Enabled = false;
 
 	M -> Disable ();
+	M -> Configure ( OpenConfig );
+	M -> Set ( 0.0 );
 
 };
 
@@ -64,41 +84,29 @@ bool ShooterWinch :: GetEnabled ()
 bool ShooterWinch :: WithinAngle ( double Threshold, double Angle )
 {
 
-	double D = fabs ( Angle - M -> GetPosition () );
+	double D = fabs ( Angle - ( M -> GetPosition () - Zero ) / PreScale );
 
 	return D < Threshold;
 
 };
 
-bool ShooterWinch :: DriveAngle ( double Angle )
+void ShooterWinch :: DriveAngle ( double Angle )
 {
 
-	M -> SetControlMode ( PICServo :: kPosition );
-	M -> Set ( Angle * ( Inverted ? -1 : 1 ) );
-
-	return M -> GetMoveDone ();
+	M -> Set ( ( Angle * ( Inverted ? - PreScale : PreScale ) ) + Zero );
 
 };
 
 double ShooterWinch :: GetAngle ()
 {
 
-	return M -> GetPosition ();
-
-};
-
-void ShooterWinch :: DrivePWM ( double Value )
-{
-
-	M -> SetControlMode ( PICServo :: kPWM );
-	M -> Set ( Value );
+	return ( M -> GetPosition () - Zero ) / ( Inverted ? - PreScale : PreScale );
 
 };
 
 void ShooterWinch :: Stop ()
 {
 
-	M -> SetControlMode ( PICServo :: kPWM );
-	M -> Set ( 0 );
+	M -> Set ( M -> GetPosition () );
 
 };

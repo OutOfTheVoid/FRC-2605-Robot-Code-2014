@@ -16,6 +16,7 @@
 #include "SubSystems/MecanumDrive.h"
 #include "SubSystems/ShooterBelts.h"
 #include "SubSystems/CollectorArms.h"
+#include "SubSystems/ShooterWinch.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -233,9 +234,12 @@ private:
 
 	// Winch
 
-	CANJagConfigInfo WinchConfig;
+	CANJagConfigInfo WinchServoConfig;
+	CANJagConfigInfo WinchFreeConfig;
 
 	AsynchCANJaguar * WinchM;
+
+	ShooterWinch * Winch;
 
 	// TEST STUFF
 

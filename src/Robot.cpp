@@ -169,20 +169,26 @@ void Robot :: InitMotors ()
 
 	// WINCH
 
-	WinchConfig.Mode = CANJaguar :: kPosition;
-	WinchConfig.P = 200;
-	WinchConfig.I = 0;
-	WinchConfig.D = 0;
-	WinchConfig.PotentiometerTurns = 10;
-	WinchConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
-	WinchConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
-	WinchConfig.MaxVoltage = 10.0;
-	WinchConfig.FaultTime = 0.51;
-	WinchConfig.LowPosLimit = 0.5;
-	WinchConfig.HighPosLimit = 9.5;
-	WinchConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
+	WinchServoConfig.Mode = CANJaguar :: kPosition;
+	WinchServoConfig.P = 3000.0;
+	WinchServoConfig.I = 0.0;
+	WinchServoConfig.D = 10.0;
+	WinchServoConfig.PotentiometerTurns = 10;
+	WinchServoConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
+	WinchServoConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
+	WinchServoConfig.MaxVoltage = 10.0;
+	WinchServoConfig.FaultTime = 0.51;
+	WinchServoConfig.LowPosLimit = 0.5;
+	WinchServoConfig.HighPosLimit = 9.5;
+	WinchServoConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
 
-	WinchM = new AsynchCANJaguar ( JagServer, 9, WinchConfig );
+	WinchFreeConfig = WinchServoConfig;
+	WinchFreeConfig.Mode = CANJaguar :: kVoltage;
+
+	WinchM = new AsynchCANJaguar ( JagServer, 9, WinchServoConfig );
+
+	Winch = new ShooterWinch ( WinchM, WinchServoConfig, WinchFreeConfig );
+	Winch -> SetInverted ( true );
 
 };
 
@@ -194,7 +200,7 @@ void Robot :: InitBehaviors ()
 	Behaviors = new BehaviorController ();
 
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
-	TeleopDrive = new TeleopDriveBehavior ( Drive, Belts, Arms, StrafeStick, RotateStick, CancelStick, GearStepper, OnShiftDelegate );
+	TeleopDrive = new TeleopDriveBehavior ( Drive, Belts, Arms, Winch, StrafeStick, RotateStick, CancelStick, GearStepper, OnShiftDelegate );
 
 	EMERGENCEY_ARMS_BEHAVIOR = "EmergenceyArms";
 	EmergenceyArms = new EmergenceyArmsBehavior ( Arms );
@@ -352,8 +358,8 @@ void Robot :: AutonomousInit ()
 	Arms -> Disable ();
 	Arms -> SetZeros ();
 
-	WinchM -> Enable ();
-	WinchInit = WinchM -> GetPosition ();
+	Winch -> Disable ();
+	Winch -> SetZero ();
 
 	GearStepper -> Set ( 2 );
 	OnShift ();
@@ -365,9 +371,7 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	WinchM -> Set ( WinchInit );
-
-	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f, Right: %f\n", Arms -> GetPositionLeft (), Arms -> GetPositionRight () );
+	Log -> Log ( Logger :: LOG_DEBUG, "Winch: %f\n", Winch -> GetAngle () );
 
 	PeriodicCommon ();
 
@@ -408,7 +412,7 @@ void Robot :: TeleopInit ()
 	LowestVoltage = 14.0;
 
 	Arms -> SetZeros ();
-	//Arms -> Enable ();
+	Winch -> SetZero ();
 
 };
 
@@ -434,8 +438,6 @@ void Robot :: TeleopPeriodic ()
 		LowestVoltage = m_ds -> GetBatteryVoltage ();
 
 	PeriodicCommon ();
-
-	//Arms -> DrivePositions ( StrafeStick -> GetZ () / 4, RotateStick -> GetZ () / 4 );
 
 };
 
