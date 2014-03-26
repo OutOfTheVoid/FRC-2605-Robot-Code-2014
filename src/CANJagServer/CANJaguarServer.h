@@ -45,6 +45,8 @@ public:
 	bool Start ();
 	void Stop ();
 
+	bool WaitForServerActive ();
+
 	void IsRunning ();
 
 	void AddJag ( CAN_ID ID, CANJagConfigInfo Info );
@@ -85,7 +87,8 @@ public:
 		SEND_MESSAGE_JAG_GET_BUS_VOLTAGE,
 		SEND_MESSAGE_JAG_GET_OUTPUT_VOLTAGE,
 		SEND_MESSAGE_JAG_GET_OUTPUT_CURRENT,
-		SEND_MESSAGE_JAG_GET_POSITION
+		SEND_MESSAGE_JAG_GET_POSITION,
+		SEND_MESSAGE_WAIT_SERVER_UP,
 
 	};
 

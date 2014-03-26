@@ -33,7 +33,7 @@ typedef struct CANJagConfigInfo
 	double D;
 	
 	UINT16 EncoderLinesPerRev;
-	UINT16 PotentiometerTurnsPerRev;
+	UINT16 PotentiometerTurns;
 	
 	bool Safety;
 

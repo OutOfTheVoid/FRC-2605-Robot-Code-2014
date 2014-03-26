@@ -32,6 +32,8 @@
 #include "Behaviors/BehaviorController.h"
 
 #include "TeleopDriveBehavior.h"
+#include "EmergenceyArmsBehavior.h"
+#include "BallPickupBehavior.h"
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
@@ -207,8 +209,12 @@ private:
 	BehaviorController * Behaviors;
 
 	TeleopDriveBehavior * TeleopDrive;
+	EmergenceyArmsBehavior * EmergenceyArms;
+	BallPickupBehavior * BallPickup;
 
 	char * TELEOP_DRIVE_BEHAVIOR;
+	char * EMERGENCEY_ARMS_BEHAVIOR;
+	char * BALL_PICKUP_BEHAVIOR;
 
 	// Ball stuff
 
@@ -217,12 +223,19 @@ private:
 
 	// Arms
 
-	CANJagConfigInfo ArmConfig;
+	CANJagConfigInfo ArmServoConfig;
+	CANJagConfigInfo ArmFreeConfig;
 
 	AsynchCANJaguar * ArmL;
 	AsynchCANJaguar * ArmR;
 
 	CollectorArms * Arms;
+
+	// Winch
+
+	CANJagConfigInfo WinchConfig;
+
+	AsynchCANJaguar * WinchM;
 
 	// TEST STUFF
 
@@ -231,6 +244,8 @@ private:
 	Logger * Log;
 
 	double LowestVoltage;
+
+	double WinchInit;
 
 };
 

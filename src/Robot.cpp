@@ -4,11 +4,12 @@ Robot :: Robot ():
 	WheelConfig (),
 	MasterBeltConfig (),
 	SlaveBeltConfig (),
-	ArmConfig ()
+	ArmServoConfig ()
 {
 
 	Log = Logger :: GetInstance ();
 	Log -> SetPrintLevel ( Logger :: LOG_DEBUG2 );
+
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Starting **\n" );
 
@@ -85,12 +86,12 @@ void Robot :: InitMotors ()
 	// CANJaguar Server
 
 	JagServer = new CANJaguarServer ();
+
 	JagServer -> Start ();
-	//JagServer -> SetJagCheckInterval ( 0.01 );
+	JagServer -> WaitForServerActive ();
 
 	// DRIVE
 
-	//WheelConfig.Mode = CANJaguar :: kVoltage;
 	WheelConfig.Mode = CANJaguar :: kSpeed;
 	WheelConfig.P = P_GEAR1;
 	WheelConfig.I = I_GEAR1;
@@ -140,26 +141,48 @@ void Robot :: InitMotors ()
 	Belts -> SetMotorScale ( BELT_SPEED_SCALE );
 	Belts -> SetInverted ( false, true );
 
-	ArmConfig.Mode = CANJaguar :: kPosition;
-	ArmConfig.P = 500.0;
-	ArmConfig.I = 0;
-	ArmConfig.D = 0;
-	ArmConfig.PotentiometerTurnsPerRev = 10;
-	ArmConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
-	ArmConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
-	ArmConfig.MaxVoltage = 14;
-	ArmConfig.FaultTime = 0.51;
-	ArmConfig.LowPosLimit = 0.5;
-	ArmConfig.HighPosLimit = 9.5;
-	ArmConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
+	// ARMS
 
-	ArmL = new AsynchCANJaguar ( JagServer, 3, ArmConfig );
-	ArmR = new AsynchCANJaguar ( JagServer, 4, ArmConfig );
+	ArmServoConfig.Mode = CANJaguar :: kPosition;
+	ArmServoConfig.P = 200.0;
+	ArmServoConfig.I = 0.0;
+	ArmServoConfig.D = 10.0;
+	ArmServoConfig.PotentiometerTurns = 10;
+	ArmServoConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
+	ArmServoConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	ArmServoConfig.MaxVoltage = 14.0;
+	ArmServoConfig.FaultTime = 0.51;
+	ArmServoConfig.LowPosLimit = 0.5;
+	ArmServoConfig.HighPosLimit = 9.5;
+	ArmServoConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
 
-	Arms = new CollectorArms ( ArmL, ArmR );
+	ArmFreeConfig = ArmServoConfig;
+	ArmFreeConfig.Mode = CANJaguar :: CANJaguar :: kPercentVbus;
+
+	ArmL = new AsynchCANJaguar ( JagServer, 4, ArmServoConfig );
+	ArmR = new AsynchCANJaguar ( JagServer, 3, ArmServoConfig );
+
+	Arms = new CollectorArms ( ArmL, ArmR, ArmServoConfig, ArmFreeConfig );
 	Arms -> SetPreScale ( 1.0 );
 	Arms -> SetInverted ( false, false );
-	Arms -> SetZeros ();
+	Arms -> Disable ();
+
+	// WINCH
+
+	WinchConfig.Mode = CANJaguar :: kPosition;
+	WinchConfig.P = 200;
+	WinchConfig.I = 0;
+	WinchConfig.D = 0;
+	WinchConfig.PotentiometerTurns = 10;
+	WinchConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
+	WinchConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
+	WinchConfig.MaxVoltage = 10.0;
+	WinchConfig.FaultTime = 0.51;
+	WinchConfig.LowPosLimit = 0.5;
+	WinchConfig.HighPosLimit = 9.5;
+	WinchConfig.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits;
+
+	WinchM = new AsynchCANJaguar ( JagServer, 9, WinchConfig );
 
 };
 
@@ -173,7 +196,15 @@ void Robot :: InitBehaviors ()
 	TELEOP_DRIVE_BEHAVIOR = "TeleopDrive";
 	TeleopDrive = new TeleopDriveBehavior ( Drive, Belts, Arms, StrafeStick, RotateStick, CancelStick, GearStepper, OnShiftDelegate );
 
+	EMERGENCEY_ARMS_BEHAVIOR = "EmergenceyArms";
+	EmergenceyArms = new EmergenceyArmsBehavior ( Arms );
+
+	BALL_PICKUP_BEHAVIOR = "BallPickup";
+	BallPickup = new BallPickupBehavior ();
+
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
+	Behaviors -> AddBehavior ( EMERGENCEY_ARMS_BEHAVIOR, EmergenceyArms );
+	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
 
 };
 
@@ -275,7 +306,7 @@ void Robot :: ShiftVGear ( uint8_t Gear )
 void Robot :: VisionTaskRoutine ()
 {
 
-	Threshold TargetColorThreshold (105, 137, 230, 255, 133, 183);
+	Threshold TargetColorThreshold ( 105, 137, 230, 255, 133, 183 );
 
 	ColorImage * TargetImage = new ColorImage ( IMAQ_IMAGE_HSL );
 
@@ -318,6 +349,12 @@ void Robot :: AutonomousInit ()
 
 	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );
 
+	Arms -> Disable ();
+	Arms -> SetZeros ();
+
+	WinchM -> Enable ();
+	WinchInit = WinchM -> GetPosition ();
+
 	GearStepper -> Set ( 2 );
 	OnShift ();
 
@@ -328,18 +365,18 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	//Behaviors -> Update ();
-
-	PeriodicCommon ();
+	WinchM -> Set ( WinchInit );
 
 	Log -> Log ( Logger :: LOG_DEBUG, "Left: %f, Right: %f\n", Arms -> GetPositionLeft (), Arms -> GetPositionRight () );
+
+	PeriodicCommon ();
 
 };
 
 void Robot :: AutonomousEnd ()
 {
 
-	Arms -> Disable ();
+	WinchM -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
@@ -371,7 +408,7 @@ void Robot :: TeleopInit ()
 	LowestVoltage = 14.0;
 
 	Arms -> SetZeros ();
-	Arms -> Enable ();
+	//Arms -> Enable ();
 
 };
 
@@ -381,6 +418,17 @@ void Robot :: TeleopPeriodic ()
 	TeleCount ++;
 
 	Behaviors -> Update ();
+
+	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
+	{
+
+		if ( TeleopDrive -> DoEmergenceyArms () && ! Behaviors -> GetBehaviorActive ( EMERGENCEY_ARMS_BEHAVIOR ) )
+			Behaviors -> StartBehavior ( EMERGENCEY_ARMS_BEHAVIOR );
+
+		if ( ! TeleopDrive -> DoEmergenceyArms () && Behaviors -> GetBehaviorActive ( EMERGENCEY_ARMS_BEHAVIOR ) )
+			Behaviors -> StopBehavior ( EMERGENCEY_ARMS_BEHAVIOR );
+
+	}
 
 	if ( m_ds -> GetBatteryVoltage () < LowestVoltage )
 		LowestVoltage = m_ds -> GetBatteryVoltage ();
@@ -399,6 +447,12 @@ void Robot :: TeleopEnd ()
 	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
 		Behaviors -> StopBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
+	if ( Behaviors -> GetBehaviorActive ( EMERGENCEY_ARMS_BEHAVIOR ) )
+		Behaviors -> StopBehavior ( EMERGENCEY_ARMS_BEHAVIOR );
+
+	if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
+		Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
+
 	DsLcd -> UpdateLCD ();
 
 	TeleopTask -> Stop ();
@@ -406,7 +460,7 @@ void Robot :: TeleopEnd ()
 	Drive -> Disable ();
 	Belts -> Disable ();
 
-	Arms -> Disable ();
+	//Arms -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "Lowest voltage for Teleop Run: %f\n", LowestVoltage );
 
@@ -550,6 +604,7 @@ void Robot :: DisabledInit ()
 
 	Belts -> Disable ();
 	Drive -> Disable ();
+	Arms -> Disable ();
 
 	BeltLSlave -> Disable ();
 	BeltRSlave -> Disable ();

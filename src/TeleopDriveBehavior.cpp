@@ -36,8 +36,8 @@ void TeleopDriveBehavior :: Start ()
 	if ( ! Belts -> GetEnabled () )
 		Belts -> Enable ();
 
-	// if ( ! Arms -> GetEnabled () )
-	//	Arms -> Enable ();
+	if ( ! Arms -> GetEnabled () )
+		Arms -> Enable ();
 
 	Gear -> Set ( 1 );
 	OnShift -> Call ();
@@ -52,6 +52,7 @@ void TeleopDriveBehavior :: Update ()
 
 	ControlDrive ();
 	ControlBelts ();
+	ControlArms ();
 
 };
 
@@ -67,10 +68,7 @@ void TeleopDriveBehavior :: Stop ()
 void TeleopDriveBehavior :: Restart ()
 {
 
-	Gear -> Set ( 1 );
-	OnShift -> Call ();
-
-	Pickup = false;
+	Start ();
 
 };
 
@@ -120,7 +118,7 @@ void TeleopDriveBehavior :: ControlBelts ()
 void TeleopDriveBehavior :: ControlArms ()
 {
 
-	//Arms -> DrivePositions ( StrafeStick -> GetZ () / 2, RotateStick -> GetZ () / 2 );
+	Arms -> DrivePositions ( StrafeStick -> GetZ () / 2, RotateStick -> GetZ () / 2 );
 
 };
 

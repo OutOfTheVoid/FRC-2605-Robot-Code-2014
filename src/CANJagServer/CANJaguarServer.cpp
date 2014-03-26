@@ -880,6 +880,59 @@ void CANJaguarServer :: RemoveJag ( CAN_ID ID )
 
 };
 
+/**
+* Waits for the server to start responding.
+*/
+
+bool CANJaguarServer :: WaitForServerActive ()
+{
+
+	semTake ( ResponseSemaphore, WAIT_FOREVER );
+
+	volatile CANJagServerMessage * Message = new CANJagServerMessage ();
+
+	Message -> Command = SEND_MESSAGE_WAIT_SERVER_UP;
+	Message -> Data = 0xAAFFAAFF;
+
+	SendError = ( msgQSend ( MessageSendQueue, reinterpret_cast <char *> ( & Message ), sizeof ( CANJagServerMessage * ), CommandWait, MSG_PRI_URGENT ) == ERROR );
+
+	if ( SendError )
+	{
+
+		semGive ( ResponseSemaphore );
+		return false;
+	
+	}
+
+	volatile CANJagServerMessage * ReceiveMessage;
+
+	if ( msgQReceive ( MessageReceiveQueue, reinterpret_cast <char *> ( & ReceiveMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER ) == ERROR )
+	{
+
+		semGive ( ResponseSemaphore );
+		return false;
+	
+	}
+
+	if ( ReceiveMessage != NULL )
+	{
+
+		if ( ReceiveMessage -> Command == SEND_MESSAGE_WAIT_SERVER_UP && ReceiveMessage -> Data == 0xFFAAFFAA )
+		{
+
+			delete ReceiveMessage;
+			return true;
+
+		}
+
+		delete ReceiveMessage;
+
+	}
+
+	return false;
+
+};
+
 void CANJaguarServer :: RunLoop ()
 {
 
@@ -961,7 +1014,8 @@ void CANJaguarServer :: RunLoop ()
 							if ( JagInfo.ID == ID )
 							{
 
-								JagInfo.Jag -> Set ( 0 );
+								Log -> Log ( Logger :: LOG_DEBUG2, "JAGUAR DISABLED: %i\n", (int) ID );
+
 								JagInfo.Jag -> DisableControl ();
 
 								break;
@@ -996,6 +1050,8 @@ void CANJaguarServer :: RunLoop ()
 
 							if ( JagInfo.ID == EJMessage -> ID )
 							{
+
+								Log -> Log ( Logger :: LOG_DEBUG2, "JAGUAR ENABLED: %i\n", (int) ID );
 
 								JagInfo.Jag -> EnableControl ( EJMessage -> EncoderInitialPosition );
 
@@ -1098,6 +1154,8 @@ void CANJaguarServer :: RunLoop ()
 							NewJag.ID = AJMessage -> ID;
 							NewJag.Jag = new CANJaguar ( AJMessage -> ID );
 							NewJag.Info = AJMessage -> Config;
+
+							NewJag.Jag -> GetPowerCycled ();
 
 							ConfigCANJaguar ( NewJag.Jag, NewJag.Info );
 
@@ -1375,6 +1433,24 @@ void CANJaguarServer :: RunLoop ()
 						delete Message;
 
 						break;
+
+					case SEND_MESSAGE_WAIT_SERVER_UP:
+
+						Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer: SERVER UP SEND\n" );
+
+						if ( Message -> Data == 0xAAFFAAFF )
+						{
+
+							SendMessage = new CANJagServerMessage ();
+
+							SendMessage -> Command = SEND_MESSAGE_WAIT_SERVER_UP;
+							SendMessage -> Data = 0xFFAAFFAA;
+
+							msgQSend ( MessageReceiveQueue, reinterpret_cast <char *> ( & SendMessage ), sizeof ( CANJagServerMessage * ), WAIT_FOREVER, MSG_PRI_URGENT );
+
+						}
+
+						delete Message;
 
 					default:
 

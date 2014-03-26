@@ -11,6 +11,9 @@ CANJagConfigInfo :: CANJagConfigInfo ()
 	Mode = CANJaguar :: kVoltage;
 	NeutralAction = CANJaguar :: kNeutralMode_Coast;
 
+	SpeedRef = CANJaguar :: kSpeedRef_None;
+	PosRef = CANJaguar :: kPosRef_None;
+
 	Limiting = CANJaguar :: kLimitMode_SwitchInputsOnly;
 	
 	MaxVoltage = 13;
@@ -45,11 +48,6 @@ void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 	case CANJaguar :: kPosition:
 		Jag -> ChangeControlMode ( CANJaguar :: kPosition );
 		Jag -> SetPID ( Conf.P, Conf.I, Conf.D );
-		Jag -> SetPositionReference ( Conf.PosRef );
-		if ( Conf.PosRef == CANJaguar :: kPosRef_QuadEncoder )
-			Jag -> ConfigEncoderCodesPerRev ( Conf.EncoderLinesPerRev );
-		else
-			Jag -> ConfigPotentiometerTurns ( Conf.PotentiometerTurnsPerRev );
 		if ( Conf.Limiting = CANJaguar :: kLimitMode_SoftPositionLimits )
 			Jag -> ConfigSoftPositionLimits ( Conf.HighPosLimit, Conf.LowPosLimit );
 		else if ( Conf.Limiting == CANJaguar :: kLimitMode_SwitchInputsOnly )
@@ -58,7 +56,6 @@ void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 		
 	case CANJaguar :: kSpeed:
 		Jag -> ChangeControlMode ( CANJaguar :: kSpeed );
-		Jag -> SetSpeedReference ( Conf.SpeedRef );
 		Jag -> ConfigEncoderCodesPerRev ( Conf.EncoderLinesPerRev );
 		Jag -> SetPID ( Conf.P, Conf.I, Conf.D );
 		break;
@@ -68,6 +65,14 @@ void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 		break;
 		
 	}
+
+	Jag -> SetPositionReference ( Conf.PosRef );
+	Jag -> SetSpeedReference ( Conf.SpeedRef );
+
+	if ( Conf.PosRef == CANJaguar :: kPosRef_QuadEncoder )
+		Jag -> ConfigEncoderCodesPerRev ( Conf.EncoderLinesPerRev );
+	else if ( Conf.PosRef == CANJaguar :: kPosRef_Potentiometer )
+		Jag -> ConfigPotentiometerTurns ( Conf.PotentiometerTurns );
 
 	Jag -> ConfigFaultTime ( Conf.FaultTime );
 	Jag -> ConfigMaxOutputVoltage ( Conf.MaxVoltage );
@@ -81,7 +86,7 @@ void ConfigCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 void CheckCANJaguar ( CANJaguar * Jag, CANJagConfigInfo Conf )
 {
 	
-	if ( Jag -> GetControlMode () != Conf.Mode )
+	if ( Jag -> GetControlMode () != Conf.Mode || Jag -> GetPowerCycled () )
 	{
 
 		ConfigCANJaguar ( Jag, Conf );

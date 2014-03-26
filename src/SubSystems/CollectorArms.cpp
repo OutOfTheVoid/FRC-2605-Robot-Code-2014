@@ -1,10 +1,13 @@
 #include "CollectorArms.h"
 
-CollectorArms :: CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR )
+CollectorArms :: CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR, CANJagConfigInfo ServoConfig, CANJagConfigInfo FreeConfig )
 {
 
 	this -> ArmL = ArmL;
 	this -> ArmR = ArmR;
+
+	this -> ServoConfig = ServoConfig;
+	this -> FreeConfig = FreeConfig;
 
 	ZeroL = 0.0;
 	ZeroR = 0.0;
@@ -34,6 +37,9 @@ bool CollectorArms :: Enable ()
 
 	Enabled = true;
 
+	ArmL -> Configure ( ServoConfig );
+	ArmR -> Configure ( ServoConfig );
+
 	ArmL -> Enable ();
 	ArmR -> Enable ();
 
@@ -48,6 +54,12 @@ void CollectorArms :: Disable ()
 
 	ArmL -> Disable ();
 	ArmR -> Disable ();
+
+	ArmL -> Configure ( FreeConfig );
+	ArmR -> Configure ( FreeConfig );
+
+	ArmL -> Set ( 0 );
+	ArmR -> Set ( 0 );
 
 };
 
@@ -100,6 +112,9 @@ void CollectorArms :: DrivePositions ( double L, double R )
 
 bool CollectorArms :: ArmPositionsWithin ( double Threshold, double L, double R )
 {
+
+	if ( ! Enabled )
+		return 0;
 
 	double LD = fabs ( L - ( ArmL -> GetPosition () - ZeroL ) / ( InvertedL ? - PreScale : PreScale ) );
 	double RD = fabs ( R - ( ArmR -> GetPosition () - ZeroR ) / ( InvertedR ? - PreScale : PreScale ) );

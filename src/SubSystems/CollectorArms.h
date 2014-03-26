@@ -2,6 +2,7 @@
 #define SHS_2605_COLLECTOR_ARMS_H
 
 #include "src/CANJagServer/AsynchCANJaguar.h"
+#include "src/CANJaguarUtils/CANJaguarUtils.h"
 
 #include "src/Logging/Logger.h"
 
@@ -11,7 +12,7 @@ class CollectorArms
 {
 public:
 
-	CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR );
+	CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR, CANJagConfigInfo ServoConfig, CANJagConfigInfo FreeConfig );
 	~CollectorArms ();
 
 	bool Enable ();
@@ -45,6 +46,9 @@ private:
 	bool InvertedL, InvertedR;
 
 	Logger * Log;
+
+	CANJagConfigInfo ServoConfig;
+	CANJagConfigInfo FreeConfig;
 
 };
 
