@@ -18,6 +18,8 @@ TeleopDriveBehavior :: TeleopDriveBehavior ( MecanumDrive * Drive, ShooterBelts 
 	this -> Arms = Arms;
 	this -> Winch = Winch;
 
+	Log = Logger :: GetInstance ();
+
 };
 
 TeleopDriveBehavior :: ~TeleopDriveBehavior ()
@@ -132,6 +134,8 @@ void TeleopDriveBehavior :: ControlWinch ()
 {
 
 	Winch -> DriveAngle ( ( CancelStick -> GetZ () + 1 ) / 2 );
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Winch position: %f\n", Winch -> GetAngle () );
 
 };
 

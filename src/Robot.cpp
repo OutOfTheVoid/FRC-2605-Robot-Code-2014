@@ -170,7 +170,7 @@ void Robot :: InitMotors ()
 	// WINCH
 
 	WinchServoConfig.Mode = CANJaguar :: kPosition;
-	WinchServoConfig.P = 3000.0;
+	WinchServoConfig.P = 1500.0;
 	WinchServoConfig.I = 0.0;
 	WinchServoConfig.D = 10.0;
 	WinchServoConfig.PotentiometerTurns = 10;
@@ -208,9 +208,13 @@ void Robot :: InitBehaviors ()
 	BALL_PICKUP_BEHAVIOR = "BallPickup";
 	BallPickup = new BallPickupBehavior ();
 
+	AUTONOMOUS_BEHAVIOR = "Autonomous";
+	Autonomous = new AutonomousBehavior ( Drive, Belts, Arms, Winch, OnShiftDelegate, GearStepper );
+
 	Behaviors -> AddBehavior ( TELEOP_DRIVE_BEHAVIOR, TeleopDrive );
 	Behaviors -> AddBehavior ( EMERGENCEY_ARMS_BEHAVIOR, EmergenceyArms );
 	Behaviors -> AddBehavior ( BALL_PICKUP_BEHAVIOR, BallPickup );
+	Behaviors -> AddBehavior ( AUTONOMOUS_BEHAVIOR, Autonomous );
 
 };
 
@@ -353,16 +357,7 @@ void Robot :: AutonomousInit ()
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Autonomous" );
 	DsLcd -> UpdateLCD ();
 
-	Log -> Log ( Logger :: LOG_DEBUG, "AUTO!\n" );
-
-	Arms -> Disable ();
-	Arms -> SetZeros ();
-
-	Winch -> Disable ();
-	Winch -> SetZero ();
-
-	GearStepper -> Set ( 2 );
-	OnShift ();
+	Behaviors -> StartBehavior ( AUTONOMOUS_BEHAVIOR );
 
 };
 
@@ -371,7 +366,7 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	Log -> Log ( Logger :: LOG_DEBUG, "Winch: %f\n", Winch -> GetAngle () );
+	Behaviors -> Update ();
 
 	PeriodicCommon ();
 
@@ -380,9 +375,9 @@ void Robot :: AutonomousPeriodic ()
 void Robot :: AutonomousEnd ()
 {
 
-	WinchM -> Disable ();
-
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
+
+	Behaviors -> StopBehavior ( AUTONOMOUS_BEHAVIOR );
 
 };
 
@@ -407,12 +402,9 @@ void Robot :: TeleopInit ()
 	
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
 
-	Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
+	//Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
 	LowestVoltage = 14.0;
-
-	Arms -> SetZeros ();
-	Winch -> SetZero ();
 
 };
 
@@ -458,11 +450,6 @@ void Robot :: TeleopEnd ()
 	DsLcd -> UpdateLCD ();
 
 	TeleopTask -> Stop ();
-
-	Drive -> Disable ();
-	Belts -> Disable ();
-
-	//Arms -> Disable ();
 
 	Log -> Log ( Logger :: LOG_EVENT, "Lowest voltage for Teleop Run: %f\n", LowestVoltage );
 

@@ -15,6 +15,8 @@
 
 #include "Controls/NumericStepper.h"
 
+#include "Logging/Logger.h"
+
 #include "WPILib.h"
 
 #define DRIVE_RESPONSE_CURVE 2.0
@@ -84,6 +86,10 @@ private:
 
 	bool Pickup;
 	bool EmergenceyArms;
+
+	// Logging
+
+	Logger * Log;
 
 };
 

@@ -35,6 +35,7 @@
 #include "TeleopDriveBehavior.h"
 #include "EmergenceyArmsBehavior.h"
 #include "BallPickupBehavior.h"
+#include "AutonomousBehavior.h"
 
 #define DRIVE_RESPONSE_CURVE 2.0
 
@@ -212,10 +213,12 @@ private:
 	TeleopDriveBehavior * TeleopDrive;
 	EmergenceyArmsBehavior * EmergenceyArms;
 	BallPickupBehavior * BallPickup;
+	AutonomousBehavior * Autonomous;
 
 	char * TELEOP_DRIVE_BEHAVIOR;
 	char * EMERGENCEY_ARMS_BEHAVIOR;
 	char * BALL_PICKUP_BEHAVIOR;
+	char * AUTONOMOUS_BEHAVIOR;
 
 	// Ball stuff
 
