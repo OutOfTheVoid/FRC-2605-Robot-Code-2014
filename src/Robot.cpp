@@ -1,14 +1,15 @@
 #include "Robot.h"
 
 Robot :: Robot ():
-	WheelConfig (),
+	WheelConfig360 (),
+	WheelConfig480 (),
 	MasterBeltConfig (),
 	SlaveBeltConfig (),
 	ArmServoConfig ()
 {
 
 	Log = Logger :: GetInstance ();
-	Log -> SetPrintLevel ( Logger :: LOG_DEBUG2 );
+	Log -> SetPrintLevel ( Logger :: LOG_DEBUG );
 
 
 	Log -> Log ( Logger :: LOG_EVENT, "** Robot Starting **\n" );
@@ -16,6 +17,17 @@ Robot :: Robot ():
 	Mode = RobotStartMode;
 
 	DsLcd = DriverStationLCD :: GetInstance ();
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Disabled\n" );
+	DsLcd -> UpdateLCD ();
+
+	Log -> Log ( Logger :: LOG_EVENT, "Opening config file...\n" );
+
+	RobotConfig = new ConfigFile ();
+
+	if ( ! RobotConfig -> Init () )
+		Log -> Log ( Logger :: LOG_WARNING, "Unable to open config file!\n" );
+	else
+		Log -> Log ( Logger :: LOG_EVENT, "Config opened!\n" );
 
 	InitVision ();
 	InitSensors ();
@@ -23,6 +35,7 @@ Robot :: Robot ():
 	InitControls ();
 	InitBehaviors ();
 	InitDecorations ();
+	LoadConfiguration ();
 
 	TestCount = 0;
 	AutoCount = 0;
@@ -51,37 +64,24 @@ void Robot :: InitSensors ()
 
 	Log -> Log ( Logger :: LOG_EVENT, "Initializing Sensors\n" );
 
+	// BALL DISTANCE IR
+
 	DistanceSensorAnalog = new AnalogChannel ( 1, 2 );
 	BallSensor = new IRDistanceSensor ( DistanceSensorAnalog );
 
-	BallPositionSwitch = new DigitalInput ( 4 );
+	BallSensorConfig  = new IRDistanceConfig ( BallSensor );
+	RobotConfig -> AddConfigSection ( BallSensorConfig );
 
-};
+	// BALL POSITION LIMIT SWITCH
 
-void Robot :: InitControls ()
-{
-
-	Log -> Log ( Logger :: LOG_EVENT, "Initializing Controls\n" );
-
-	StrafeStick = new Joystick ( 1 );
-	RotateStick = new Joystick ( 2 );
-	CancelStick = new Joystick ( 3 );
-
-	OnShiftDelegate = new ClassDelegate <Robot, void> ( this, & Robot :: OnShift );
-
-	GearStepper = new NumericStepper ( StrafeStick, 5, 4 );
-	GearStepper -> SetRange ( 1, 3 );
-	GearStepper -> SetChangeListener ( OnShiftDelegate );
-	GearStepper -> Set ( 1 );
-
-	OnShift ();
+	BallLimit = new DigitalInput ( 10 );
 
 };
 
 void Robot :: InitMotors ()
 {
 
-	Log -> Log ( Logger :: LOG_EVENT, "Initializing Motors\n" );
+	Log -> Log ( Logger :: LOG_DEBUG, "Initializing Motors\n" );
 
 	// CANJaguar Server
 
@@ -92,19 +92,22 @@ void Robot :: InitMotors ()
 
 	// DRIVE
 
-	WheelConfig.Mode = CANJaguar :: kSpeed;
-	WheelConfig.P = P_GEAR1;
-	WheelConfig.I = I_GEAR1;
-	WheelConfig.D = D_GEAR1;
-	WheelConfig.EncoderLinesPerRev = ENCODER_CODES_PER_REVOLUTION;
-	WheelConfig.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
-	WheelConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
-	WheelConfig.FaultTime = 0.51;
+	WheelConfig360.Mode = CANJaguar :: kSpeed;
+	WheelConfig360.P = P_GEAR1;
+	WheelConfig360.I = I_GEAR1;
+	WheelConfig360.D = D_GEAR1;
+	WheelConfig360.EncoderLinesPerRev = ENCODER_CODES_PER_REVOLUTION_360;
+	WheelConfig360.SpeedRef = CANJaguar :: kSpeedRef_QuadEncoder;
+	WheelConfig360.NeutralAction = CANJaguar :: kNeutralMode_Brake;
+	WheelConfig360.FaultTime = 0.51;
 
-	WheelFL = new AsynchCANJaguar ( JagServer, 7, WheelConfig );
-	WheelFR = new AsynchCANJaguar ( JagServer, 1, WheelConfig );
-	WheelRL = new AsynchCANJaguar ( JagServer, 6, WheelConfig );
-	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig );
+	WheelConfig480 = WheelConfig360;
+	WheelConfig480.EncoderLinesPerRev = ENCODER_CODES_PER_REVOLUTION_480;
+
+	WheelFL = new AsynchCANJaguar ( JagServer, 7, WheelConfig480 );
+	WheelFR = new AsynchCANJaguar ( JagServer, 1, WheelConfig360 );
+	WheelRL = new AsynchCANJaguar ( JagServer, 6, WheelConfig480 );
+	WheelRR = new AsynchCANJaguar ( JagServer, 2, WheelConfig360 );
 
 	Drive = new MecanumDrive ( WheelFL, WheelFR, WheelRL, WheelRR );
 
@@ -126,20 +129,25 @@ void Robot :: InitMotors ()
 	MasterBeltConfig.MaxVoltage = 14;
 	MasterBeltConfig.FaultTime = 0.51;
 
+	/*MasterBeltConfig.Mode = CANJaguar :: kVoltage;
+	MasterBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
+	MasterBeltConfig.MaxVoltage = 14;
+	MasterBeltConfig.FaultTime = 0.51;*/
+
 	SlaveBeltConfig.Mode = CANJaguar :: kVoltage;
 	SlaveBeltConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
 	SlaveBeltConfig.MaxVoltage = 14;
 	SlaveBeltConfig.FaultTime = 0.51;
 
-	BeltL = new AsynchCANJaguar ( JagServer, 8, MasterBeltConfig );
-	BeltR = new AsynchCANJaguar ( JagServer, 5, MasterBeltConfig );
+	BeltL = new AsynchCANJaguar ( JagServer, 5, MasterBeltConfig );
+	BeltR = new AsynchCANJaguar ( JagServer, 8, MasterBeltConfig );
 	BeltLSlave = new AsynchCANJaguar ( JagServer, 10, SlaveBeltConfig );
 	BeltRSlave = new AsynchCANJaguar ( JagServer, 11, SlaveBeltConfig );
 
 	Belts = new ShooterBelts ( BeltL, BeltR );
 
 	Belts -> SetMotorScale ( BELT_SPEED_SCALE );
-	Belts -> SetInverted ( false, true );
+	Belts -> SetInverted ( false, false );
 
 	// ARMS
 
@@ -150,7 +158,7 @@ void Robot :: InitMotors ()
 	ArmServoConfig.PotentiometerTurns = 10;
 	ArmServoConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
 	ArmServoConfig.NeutralAction = CANJaguar :: kNeutralMode_Coast;
-	ArmServoConfig.MaxVoltage = 14.0;
+	ArmServoConfig.MaxVoltage = 10.0;
 	ArmServoConfig.FaultTime = 0.51;
 	ArmServoConfig.LowPosLimit = 0.5;
 	ArmServoConfig.HighPosLimit = 9.5;
@@ -167,12 +175,15 @@ void Robot :: InitMotors ()
 	Arms -> SetInverted ( false, false );
 	Arms -> Disable ();
 
+	ArmsConfig = new ArmConfig ( Arms );
+	RobotConfig -> AddConfigSection ( ArmsConfig );
+
 	// WINCH
 
 	WinchServoConfig.Mode = CANJaguar :: kPosition;
-	WinchServoConfig.P = 1500.0;
+	WinchServoConfig.P = 2000.0;
 	WinchServoConfig.I = 0.0;
-	WinchServoConfig.D = 10.0;
+	WinchServoConfig.D = 8.0;
 	WinchServoConfig.PotentiometerTurns = 10;
 	WinchServoConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
 	WinchServoConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
@@ -190,12 +201,35 @@ void Robot :: InitMotors ()
 	Winch = new ShooterWinch ( WinchM, WinchServoConfig, WinchFreeConfig );
 	Winch -> SetInverted ( true );
 
+	WinchConf = new WinchConfig ( Winch );
+	RobotConfig -> AddConfigSection ( WinchConf );
+
+};
+
+void Robot :: InitControls ()
+{
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Initializing Controls\n" );
+
+	StrafeStick = new Joystick ( 1 );
+	RotateStick = new Joystick ( 2 );
+	CancelStick = new Joystick ( 3 );
+
+	OnShiftDelegate = new ClassDelegate <Robot, void> ( this, & Robot :: OnShift );
+
+	GearStepper = new NumericStepper ( StrafeStick, 5, 4 );
+	GearStepper -> SetRange ( 1, 3 );
+	GearStepper -> SetChangeListener ( OnShiftDelegate );
+	GearStepper -> Set ( 2 );
+
+	OnShift ();
+
 };
 
 void Robot :: InitBehaviors ()
 {
 
-	Log -> Log ( Logger :: LOG_EVENT, "Initializing Behaviors\n" );
+	Log -> Log ( Logger :: LOG_DEBUG, "Initializing Behaviors\n" );
 
 	Behaviors = new BehaviorController ();
 
@@ -206,7 +240,7 @@ void Robot :: InitBehaviors ()
 	EmergenceyArms = new EmergenceyArmsBehavior ( Arms );
 
 	BALL_PICKUP_BEHAVIOR = "BallPickup";
-	BallPickup = new BallPickupBehavior ();
+	BallPickup = new BallPickupBehavior ( Drive, Arms, Winch, Belts, GearStepper, OnShiftDelegate, BallSensor, BallLimit );
 
 	AUTONOMOUS_BEHAVIOR = "Autonomous";
 	Autonomous = new AutonomousBehavior ( Drive, Belts, Arms, Winch, OnShiftDelegate, GearStepper );
@@ -222,6 +256,15 @@ void Robot :: InitDecorations ()
 {
 
 };
+
+void Robot :: LoadConfiguration ()
+{
+
+	BallSensorConfig -> LoadSensorCalibration ();
+	ArmsConfig -> LoadArmZeros ();
+	WinchConf -> LoadZero ();
+
+}
 
 Robot :: ~Robot ()
 {
@@ -256,14 +299,17 @@ void Robot :: ShiftVGear ( uint8_t Gear )
 
 			GearRPM = SPEED_SCALE_GEAR1;
 
-			WheelConfig.P = P_GEAR1;
-			WheelConfig.I = I_GEAR1;
-			WheelConfig.D = D_GEAR1;
+			WheelConfig360.P = P_GEAR1;
+			WheelConfig360.I = I_GEAR1;
+			WheelConfig360.D = D_GEAR1;
+			WheelConfig480.P = P_GEAR1;
+			WheelConfig480.I = I_GEAR1;
+			WheelConfig480.D = D_GEAR1;
 
-			WheelFL -> Configure ( WheelConfig );
-			WheelFR -> Configure ( WheelConfig );
-			WheelRL -> Configure ( WheelConfig );
-			WheelRR -> Configure ( WheelConfig );
+			WheelFL -> Configure ( WheelConfig480 );
+			WheelFR -> Configure ( WheelConfig360 );
+			WheelRL -> Configure ( WheelConfig480 );
+			WheelRR -> Configure ( WheelConfig360 );
 
 			break;
 
@@ -273,14 +319,17 @@ void Robot :: ShiftVGear ( uint8_t Gear )
 
 			GearRPM = SPEED_SCALE_GEAR2;
 
-			WheelConfig.P = P_GEAR2;
-			WheelConfig.I = I_GEAR2;
-			WheelConfig.D = D_GEAR2;
+			WheelConfig360.P = P_GEAR2;
+			WheelConfig360.I = I_GEAR2;
+			WheelConfig360.D = D_GEAR2;
+			WheelConfig480.P = P_GEAR2;
+			WheelConfig480.I = I_GEAR2;
+			WheelConfig480.D = D_GEAR2;
 
-			WheelFL -> Configure ( WheelConfig );
-			WheelFR -> Configure ( WheelConfig );
-			WheelRL -> Configure ( WheelConfig );
-			WheelRR -> Configure ( WheelConfig );
+			WheelFL -> Configure ( WheelConfig480 );
+			WheelFR -> Configure ( WheelConfig360 );
+			WheelRL -> Configure ( WheelConfig480 );
+			WheelRR -> Configure ( WheelConfig360 );
 
 			break;
 
@@ -290,14 +339,17 @@ void Robot :: ShiftVGear ( uint8_t Gear )
 
 			GearRPM = SPEED_SCALE_GEAR3;
 	
-			WheelConfig.P = P_GEAR3;
-			WheelConfig.I = I_GEAR3;
-			WheelConfig.D = D_GEAR3;
+			WheelConfig360.P = P_GEAR3;
+			WheelConfig360.I = I_GEAR3;
+			WheelConfig360.D = D_GEAR3;
+			WheelConfig480.P = P_GEAR3;
+			WheelConfig480.I = I_GEAR3;
+			WheelConfig480.D = D_GEAR3;
 
-			WheelFL -> Configure ( WheelConfig );
-			WheelFR -> Configure ( WheelConfig );
-			WheelRL -> Configure ( WheelConfig );
-			WheelRR -> Configure ( WheelConfig );
+			WheelFL -> Configure ( WheelConfig480 );
+			WheelFR -> Configure ( WheelConfig360 );
+			WheelRL -> Configure ( WheelConfig480 );
+			WheelRR -> Configure ( WheelConfig360 );
 
 			break;
 
@@ -332,11 +384,13 @@ void Robot :: VisionTaskRoutine ()
 void Robot :: PeriodicCommon ()
 {
 
+	Behaviors -> Update ();
+
 	if ( IsEnabled () )
 	{
 
-		BeltLSlave -> Set ( BeltL -> GetOutputVoltage () * ( ( BeltL -> Get () > 0 ) ? 1 : - 1 ) );
-		BeltRSlave -> Set ( BeltR -> GetOutputVoltage () * ( ( BeltR -> Get () > 0 ) ? 1 : - 1 ) );
+		BeltLSlave -> Set ( BeltL -> GetOutputVoltage () * ( ( BeltL -> Get () > 0 ) ? - 1 : 1 ) );
+		BeltRSlave -> Set ( BeltR -> GetOutputVoltage () * ( ( BeltR -> Get () > 0 ) ? - 1 : 1 ) );
 
 	}
 
@@ -366,8 +420,6 @@ void Robot :: AutonomousPeriodic ()
 
 	AutoCount ++;
 
-	Behaviors -> Update ();
-
 	PeriodicCommon ();
 
 };
@@ -378,6 +430,10 @@ void Robot :: AutonomousEnd ()
 	Log -> Log ( Logger :: LOG_EVENT, "================\n= Autonomous X =\n================\n" );
 
 	Behaviors -> StopBehavior ( AUTONOMOUS_BEHAVIOR );
+
+	ArmsConfig -> SetArmZeros ();
+	WinchConf -> SetZero ();
+	RobotConfig -> Write ();
 
 };
 
@@ -401,8 +457,9 @@ void Robot :: TeleopInit ()
 	Log -> Log ( Logger :: LOG_EVENT, "================\n=   Teleop !    =\n================\n" );		
 	
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Teleop" );
+	DsLcd -> UpdateLCD ();
 
-	//Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
+	Behaviors -> StartBehavior ( TELEOP_DRIVE_BEHAVIOR );
 
 	LowestVoltage = 14.0;
 
@@ -413,7 +470,7 @@ void Robot :: TeleopPeriodic ()
 
 	TeleCount ++;
 
-	Behaviors -> Update ();
+	PeriodicCommon ();
 
 	if ( Behaviors -> GetBehaviorActive ( TELEOP_DRIVE_BEHAVIOR ) )
 	{
@@ -424,12 +481,16 @@ void Robot :: TeleopPeriodic ()
 		if ( ! TeleopDrive -> DoEmergenceyArms () && Behaviors -> GetBehaviorActive ( EMERGENCEY_ARMS_BEHAVIOR ) )
 			Behaviors -> StopBehavior ( EMERGENCEY_ARMS_BEHAVIOR );
 
+		if ( TeleopDrive -> DoPickup () && ! Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
+			Behaviors -> StartBehavior ( BALL_PICKUP_BEHAVIOR );
+
+		if ( ! TeleopDrive -> DoPickup () && Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
+			Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
+
 	}
 
 	if ( m_ds -> GetBatteryVoltage () < LowestVoltage )
 		LowestVoltage = m_ds -> GetBatteryVoltage ();
-
-	PeriodicCommon ();
 
 };
 
@@ -446,8 +507,6 @@ void Robot :: TeleopEnd ()
 
 	if ( Behaviors -> GetBehaviorActive ( BALL_PICKUP_BEHAVIOR ) )
 		Behaviors -> StopBehavior ( BALL_PICKUP_BEHAVIOR );
-
-	DsLcd -> UpdateLCD ();
 
 	TeleopTask -> Stop ();
 
@@ -483,10 +542,12 @@ void Robot :: TestInit ()
 
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Test" );
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "0.2 Meters," );
-	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 3" );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 3 To Cal." );
+	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line5, "Press 8 To Save." );
 	DsLcd -> UpdateLCD ();
 
 	TestPeriodMode = 0;
+	LastSaveButtonState = false;
 
 };
 
@@ -494,6 +555,8 @@ void Robot :: TestPeriodic ()
 {
 
 	TestCount ++;
+
+	PeriodicCommon ();
 
 	switch ( TestPeriodMode )
 	{
@@ -505,10 +568,12 @@ void Robot :: TestPeriodic ()
 
 			BallSensor -> CalibHighPoint ( 0.2 );
 
+			BallSensorConfig -> SetSensorCalibration ();
+
 			TestPeriodMode = 1;
 
 			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "0.8 Meters," );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 2." );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 2 To Cal." );
 
 		}
 
@@ -521,10 +586,12 @@ void Robot :: TestPeriodic ()
 
 			BallSensor -> CalibLowPoint ( 0.8 );
 
+			BallSensorConfig -> SetSensorCalibration ();
+
 			TestPeriodMode = 0;
 
 			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line3, "0.2 Meters," );
-			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 3" );
+			DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line4, "Press 3 To Cal." );
 
 		}
 
@@ -535,10 +602,13 @@ void Robot :: TestPeriodic ()
 
 	}
 
+	if ( StrafeStick -> GetRawButton ( 8 ) && ! LastSaveButtonState )
+		RobotConfig -> Write ();
+
+	LastSaveButtonState = StrafeStick -> GetRawButton ( 8 );
+
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line6, "X: %f", BallSensor -> Get () );
 	DsLcd -> UpdateLCD ();
-
-	PeriodicCommon ();
 
 };
 
@@ -588,12 +658,14 @@ void Robot :: DisabledInit ()
 
 	Log -> Log ( Logger :: LOG_EVENT, "================\n=  Disabled !  =\n================\n" );
 
+	DsLcd -> Clear ();
 	DsLcd -> PrintfLine ( DriverStationLCD :: kUser_Line1, "Disabled\n" );
 	DsLcd -> UpdateLCD ();
 
 	Belts -> Disable ();
 	Drive -> Disable ();
 	Arms -> Disable ();
+	Winch -> Disable ();
 
 	BeltLSlave -> Disable ();
 	BeltRSlave -> Disable ();
@@ -647,5 +719,18 @@ int Robot :: VisionTaskStub ( Robot * This )
 
 };
 
-START_ROBOT_CLASS ( Robot );
+//============================================================//
+/*=========================[DISASTER]=========================*/
+//============================================================//
 
+void Robot :: HolyFuck ()
+{
+
+	Belts -> Disable ();
+	Drive -> Disable ();
+	Arms -> Disable ();
+	Winch -> Disable ();
+
+};
+
+START_ROBOT_CLASS ( Robot );

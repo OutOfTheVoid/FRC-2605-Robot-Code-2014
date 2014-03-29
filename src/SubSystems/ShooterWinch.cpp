@@ -15,6 +15,8 @@ ShooterWinch :: ShooterWinch ( AsynchCANJaguar * Motor, CANJagConfigInfo ServoCo
 
 	PreScale = 1.0;
 
+	Log = Logger :: GetInstance ();
+
 };
 
 ShooterWinch :: ~ShooterWinch ()
@@ -85,6 +87,8 @@ bool ShooterWinch :: WithinAngle ( double Threshold, double Angle )
 {
 
 	double D = fabs ( Angle - ( M -> GetPosition () - Zero ) / PreScale );
+
+	Log -> Log ( Logger :: LOG_DEBUG, "Winch diff: %f, Reached: %s\n", D, ( D < Threshold ) ? "True" : "False" );
 
 	return D < Threshold;
 

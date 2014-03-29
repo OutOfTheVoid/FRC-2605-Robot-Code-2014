@@ -50,7 +50,7 @@ void EmergenceyArmsBehavior :: Update ()
 
 		Arms -> DrivePositions ( ARM_LEFT_IN, ArmRightStart );
 
-		if ( Arms -> ArmPositionsWithin ( 0.2, ARM_LEFT_IN, ArmRightStart ) )
+		if ( Arms -> ArmPositionsWithin ( 0.1, ARM_LEFT_IN, ArmRightStart ) )
 			State = STATE_RIGHT_IN;
 
 		break;
@@ -59,7 +59,7 @@ void EmergenceyArmsBehavior :: Update ()
 
 		Arms -> DrivePositions ( ARM_LEFT_IN, ARM_RIGHT_IN );
 
-		if ( Arms -> ArmPositionsWithin ( 0.2, ARM_LEFT_IN, ARM_RIGHT_IN ) )
+		if ( Arms -> ArmPositionsWithin ( 0.1, ARM_LEFT_IN, ARM_RIGHT_IN ) )
 			State = STATE_FINISHED;
 
 		break;

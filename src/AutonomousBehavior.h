@@ -14,15 +14,18 @@
 #include "SubSystems/CollectorArms.h"
 #include "SubSystems/ShooterWinch.h"
 
-#define TIME_DRIVE_FORWARD 3.2
-#define TIME_BALL_DROP 1.5
+#include "Logging/Logger.h"
+
+#define TIME_DRIVE_FORWARD 3.0
+#define TIME_BALL_DROP 1.6
 #define TIME_BALL_SHOOT 1.0
 
 #define POSITION_LEFT_OUT 0.67
 #define POSITION_RIGHT_OUT 0.36
+#define POSITION_RIGHT_OUT_FULL 0.88
 
 #define ANGLE_ARM_DEPLOY 0.30
-#define ANGLE_BALL_DROP 0.45
+#define ANGLE_BALL_DROP 0.47
 #define ANGLE_BALL_CLAMP 0.0
 
 class AutonomousBehavior : public Behavior
@@ -43,11 +46,12 @@ private:
 	{
 
 		STATE_START = 0,
-		STATE_ARML_DEPLOY,
-		STATE_ARMR_DEPLOY,
-		STATE_BALL_DROP,
-		STATE_BALL_SHOOT,
-		STATE_FINISHED
+		STATE_ARML_DEPLOY = 1,
+		STATE_ARMR_DEPLOY = 2,
+		STATE_BALL_DROP = 3,
+		STATE_BALL_SHOOT = 4,
+		STATE_BALL_PRE_SHOOT = 5,
+		STATE_FINISHED = 6
 
 	} AutonomousState;
 
@@ -75,6 +79,10 @@ private:
 	// Winch
 
 	ShooterWinch * Winch;
+
+	// Logging
+
+	Logger * Log;
 
 };
 

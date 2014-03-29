@@ -46,8 +46,14 @@ void Logger :: Log ( LogLevel Level, const char * Format, ... )
 	if ( Level <= PrintLevel )
 	{
 
+		if ( Level == LOG_PROBLEM )
+			printf ( "********** FATAL ERROR: " );
+
 		if ( Level == LOG_ERROR )
 			printf ( "* ERROR: " );
+
+		if ( Level == LOG_PROBLEM )
+			printf ( "* PROBLEM: " );
 
 		if ( Level == LOG_WARNING )
 			printf ( "* WARNING: " );
@@ -57,7 +63,7 @@ void Logger :: Log ( LogLevel Level, const char * Format, ... )
 		vprintf ( Format, ArgList );
 		va_end ( ArgList );
 
-		if ( Level == LOG_ERROR )
+		if ( Level == LOG_FATAL_ERROR )
 		{
 
 			semGive ( PrintSynchSemaphore );

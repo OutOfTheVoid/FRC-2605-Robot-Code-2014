@@ -13,7 +13,7 @@ class ConfigFile
 {
 public:
 
-	ConfigFile ( const char * FilePath = "/FRC-Config.json" );
+	ConfigFile ( const char * FilePath = "/RobotConfig/FRC2605-Config.json" );
 	~ConfigFile ();
 
 	bool Init ();

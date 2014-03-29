@@ -56,10 +56,17 @@ void TeleopDriveBehavior :: Start ()
 void TeleopDriveBehavior :: Update ()
 {
 
+	EmergenceyArms = CancelStick -> GetRawButton ( 3 );
+	Pickup = RotateStick -> GetRawButton ( 5 );
+
 	ControlDrive ();
 	ControlBelts ();
+
+	if ( ! Pickup || ! EmergenceyArms )
 	ControlArms ();
-	ControlWinch ();
+
+	if ( ! Pickup || ! EmergenceyArms )
+		ControlWinch ();
 
 };
 
@@ -110,8 +117,9 @@ void TeleopDriveBehavior :: ControlDrive ()
 void TeleopDriveBehavior :: ControlBelts ()
 {
 
+	// MODIFIED FOR OPEN LOOP
 	if ( RotateStick -> GetRawButton ( 1 ) )
-		Belts -> SetSpeed ( 0.99 );
+		Belts -> SetSpeed ( 5.0 );
 	else if ( RotateStick -> GetRawButton ( 3 ) )
 		Belts -> SetSpeed ( 0.07 );
 	else if ( RotateStick -> GetRawButton ( 2 ) )
@@ -126,16 +134,21 @@ void TeleopDriveBehavior :: ControlBelts ()
 void TeleopDriveBehavior :: ControlArms ()
 {
 
-	Arms -> DrivePositions ( StrafeStick -> GetZ () / 2, RotateStick -> GetZ () / 2 );
+	Arms -> DrivePositions ( CancelStick -> GetZ () / 2 + 0.6, CancelStick -> GetZ () / 2 + 0.80 );
 
 };
 
 void TeleopDriveBehavior :: ControlWinch ()
 {
 
-	Winch -> DriveAngle ( ( CancelStick -> GetZ () + 1 ) / 2 );
+	//Winch -> DriveAngle ( ( CancelStick -> GetZ () + 1 ) / 2 );
 
-	Log -> Log ( Logger :: LOG_DEBUG, "Winch position: %f\n", Winch -> GetAngle () );
+	if ( CancelStick -> GetRawButton ( 6 ) )
+		Winch -> DriveAngle ( ( 0.18 ) );
+	else if ( CancelStick -> GetRawButton ( 7 ) )
+		Winch -> DriveAngle ( 0.45 );
+	else
+		Winch -> DriveAngle ( 0.0 );
 
 };
 

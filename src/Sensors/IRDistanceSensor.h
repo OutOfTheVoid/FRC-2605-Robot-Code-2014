@@ -38,7 +38,7 @@ public:
 
 	void SetUseAverage ( bool UseAverage );
 
-	range_t GetOutputRange ( range_t Out );
+	range_t GetOutputRange ();
 
 	double Get ();
 

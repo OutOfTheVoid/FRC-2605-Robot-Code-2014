@@ -8,9 +8,13 @@
 
 #include <cmath>
 
+class ArmConfig;
+
 class CollectorArms
 {
 public:
+
+	friend class ArmConfig;
 
 	CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR, CANJagConfigInfo ServoConfig, CANJagConfigInfo FreeConfig );
 	~CollectorArms ();

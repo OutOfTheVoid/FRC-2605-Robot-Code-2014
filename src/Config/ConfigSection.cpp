@@ -4,7 +4,7 @@ ConfigSection :: ConfigSection ( const char * Name )
 {
 
 	this -> Name = Name;
-	this -> SectionNode = NULL;
+	this -> SectionNode = json_object ();
 
 };
 

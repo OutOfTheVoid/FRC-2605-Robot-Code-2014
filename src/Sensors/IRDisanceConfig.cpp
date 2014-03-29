@@ -35,17 +35,12 @@ void IRDistanceConfig :: SetSensorCalibration ()
 	json_t * CalibInLow = json_real ( Sensor -> InAttenuator -> GetRangeIn ().Low );
 	json_t * CalibInHigh = json_real ( Sensor -> InAttenuator -> GetRangeIn ().High );
 
-	json_t * CalibOutLow = json_real ( Sensor -> InAttenuator -> GetRangeOut ().Low );
+	json_t * CalibOutLow = json_real ( Sensor -> OutAttenuator -> GetRangeOut ().Low );
 	json_t * CalibOutHigh = json_real ( Sensor -> OutAttenuator -> GetRangeOut ().High );
 
 	json_object_set ( SectionNode, "Calib_In_Low", CalibInLow );
 	json_object_set ( SectionNode, "Calib_In_High", CalibInHigh );
 	json_object_set ( SectionNode, "Calib_Out_Low", CalibOutLow );
 	json_object_set ( SectionNode, "Calib_Out_High", CalibOutHigh );
-
-	json_decref ( CalibInLow );
-	json_decref ( CalibInHigh );
-	json_decref ( CalibOutLow );
-	json_decref ( CalibOutHigh );
 
 };

@@ -936,7 +936,7 @@ bool CANJaguarServer :: WaitForServerActive ()
 void CANJaguarServer :: RunLoop ()
 {
 
-	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer RUNLOOP ENTERED!\n" );
+	Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer RUNLOOP ENTERED!\n" );
 
 	if ( MessageSendQueue == NULL )
 		return;
@@ -952,12 +952,12 @@ void CANJaguarServer :: RunLoop ()
 	bool Conflict = false;
 	CANJagServerMessage * SendMessage;
 
-	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer TIME_MARK\n" );
+	Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer TIME_MARK\n" );
 
 	double PreJagCheckTime = Timer :: GetPPCTimestamp () - JagCheckInterval;
 	double PreCANCheckTime = Timer :: GetPPCTimestamp () - CANUpdateInterval;
 
-	Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer ENTERING MESSAGE LOOP\n" );
+	Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ENTERING MESSAGE LOOP\n" );
 
 	while ( true )
 	{
@@ -1106,8 +1106,6 @@ void CANJaguarServer :: RunLoop ()
 					// Add Jaguar
 					case SEND_MESSAGE_JAG_ADD:
 
-						Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ADDING JAGUAR:\n" );
-
 						// Retreive ADD_JAG Message.
 						AddCANJagMessage * AJMessage = reinterpret_cast <AddCANJagMessage *> ( Message -> Data );
 
@@ -1135,7 +1133,7 @@ void CANJaguarServer :: RunLoop ()
 
 								Conflict = true;
 
-								Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ADD_JAG_CONFLICT! (ID: %i)\n", AJMessage -> ID );
+								Log -> Log ( Logger :: LOG_PROBLEM, "CANJaguarServer ADD_JAG_CONFLICT! (ID: %i)\n", AJMessage -> ID );
 
 								break;
 
@@ -1161,7 +1159,7 @@ void CANJaguarServer :: RunLoop ()
 
 							Jags -> Push ( NewJag );
 
-							Log -> Log ( Logger :: LOG_DEBUG3, "CANJaguarServer ADDED! (ID: %i)\n", AJMessage -> ID );
+							Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer JAG ADDED! (ID: %i)\n", AJMessage -> ID );
 
 						}
 
@@ -1173,8 +1171,6 @@ void CANJaguarServer :: RunLoop ()
 					// Config Jaguar
 					case SEND_MESSAGE_JAG_CONFIG:
 
-						Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer JAG_CONFIG\n" );
-
 						// Retreive JAG_CONFIG Message.
 						ConfigCANJagMessage * CJMessage = reinterpret_cast <ConfigCANJagMessage *> ( Message -> Data );
 
@@ -1182,7 +1178,7 @@ void CANJaguarServer :: RunLoop ()
 						if ( CJMessage == NULL )
 						{
 
-							Log -> Log ( Logger :: LOG_WARNING, "CANJaguarServer CJMESSAGE NULL\n" );
+							Log -> Log ( Logger :: LOG_WARNING, "CANJaguarServer CONFIG PROBLEM!\n" );
 
 							delete Message;
 							break;
@@ -1194,8 +1190,6 @@ void CANJaguarServer :: RunLoop ()
 						// Find the appropriate Jaguar and configure it.
 						for ( uint32_t i = 0; i < Jags -> GetLength (); i ++ )
 						{
-
-							Log -> Log ( Logger :: LOG_DEBUG2, "CANJaguarServer TEST #%i, ID: %i\n", i, CJMessage -> ID );
 
 							ServerCANJagInfo JagInfo = ( * Jags ) [ i ];
 
@@ -1464,13 +1458,13 @@ void CANJaguarServer :: RunLoop ()
 			else
 			{
 
-				Log -> Log ( Logger :: LOG_WARNING, "CANJaguarServer NULL MESSAGE\n" );
+				Log -> Log ( Logger :: LOG_PROBLEM, "CANJaguarServer NULL MESSAGE\n" );
 
 			}
 
 		}
 		else if ( errno != S_objLib_OBJ_TIMEOUT )
-			Log -> Log ( Logger :: LOG_DEBUG, "CANJaguarServer MESSAGE RECEIVE FAILURE\n" );
+			Log -> Log ( Logger :: LOG_WARNING, "CANJaguarServer MESSAGE RECEIVE FAILURE\n" );
 
 		// Get time passed since last brown-out check.
 		double CheckTime = Timer :: GetPPCTimestamp ();

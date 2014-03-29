@@ -10,7 +10,7 @@ IRDistanceSensor :: IRDistanceSensor ( AnalogChannel * Channel )
 
 	range_t In ( 0.3, 3.3 );
 	range_t Out ( 0.8, 0.09 );
-	range_t Calc ( 0.0, 0.1 );
+	range_t Calc ( 0.0, 1.0 );
 
 	In.Low = 0.3;
 	In.High = 3.3;
@@ -51,7 +51,7 @@ void IRDistanceSensor :: SetOutputRange ( range_t Out )
 
 };
 
-range_t IRDistanceSensor :: GetOutputRange ( range_t Out )
+range_t IRDistanceSensor :: GetOutputRange ()
 {
 
 	return OutAttenuator -> GetRangeOut ();

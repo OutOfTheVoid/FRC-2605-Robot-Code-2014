@@ -19,6 +19,8 @@ CollectorArms :: CollectorArms ( AsynchCANJaguar * ArmL, AsynchCANJaguar * ArmR,
 
 	PreScale = 1.0;
 
+	Log = Logger :: GetInstance ();
+
 };
 
 CollectorArms :: ~CollectorArms ()
@@ -37,7 +39,7 @@ bool CollectorArms :: Enable ()
 
 	Enabled = true;
 
-	ArmL -> Configure ( ServoConfig );
+	ArmL -> Configure ( ServoConfig ); 
 	ArmR -> Configure ( ServoConfig );
 
 	ArmL -> Enable ();

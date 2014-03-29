@@ -17,6 +17,8 @@
 #include "SubSystems/ShooterBelts.h"
 #include "SubSystems/CollectorArms.h"
 #include "SubSystems/ShooterWinch.h"
+#include "SubSystems/ArmConfig.h"
+#include "SubSystems/WinchConfig.h"
 
 #include "Filters/ExponentialFilter.h"
 #include "Filters/DeadbandFilter.h"
@@ -37,6 +39,10 @@
 #include "BallPickupBehavior.h"
 #include "AutonomousBehavior.h"
 
+#include "Config/ConfigFile.h"
+
+#include "Sensors/IRDistanceConfig.h"
+
 #define DRIVE_RESPONSE_CURVE 2.0
 
 #define SPEED_SCALE_GEAR1 80
@@ -55,7 +61,8 @@
 #define I_GEAR3 0.0250
 #define D_GEAR3 0.0010
 
-#define ENCODER_CODES_PER_REVOLUTION 3075
+#define ENCODER_CODES_PER_REVOLUTION_360 3075
+#define ENCODER_CODES_PER_REVOLUTION_480 3416
 
 #define ROTATION_P 1.0000
 #define ROTATION_I 1.0010
@@ -70,6 +77,7 @@
 
 #define BELT_ENCODER_CODES_PER_REVOLUTION 2500
 
+// MODIFIED FOR OPEN LOOP
 #define BELT_SPEED_SCALE 2500
 
 #define ARM_P 0.0000
@@ -97,6 +105,7 @@ public:
 	void InitVision ();
 	void InitSensors ();
 	void InitDecorations ();
+	void LoadConfiguration ();
 	
 	void PeriodicCommon ();
 
@@ -127,6 +136,8 @@ public:
 	void OnShift ();
 	void ShiftVGear ( uint8_t Gear );
 
+	void HolyFuck ();
+
 	typedef enum
 	{
 
@@ -149,6 +160,12 @@ private:
 	uint32_t TestCount;
 	uint32_t DisbCount;
 
+	bool LastSaveButtonState;
+
+	// Robot configuration file
+
+	ConfigFile * RobotConfig;
+
 	// Driver station readout
 	
 	DriverStationLCD * DsLcd;
@@ -166,7 +183,8 @@ private:
 
 	MecanumDrive * Drive;
 
-	CANJagConfigInfo WheelConfig;
+	CANJagConfigInfo WheelConfig360;
+	CANJagConfigInfo WheelConfig480;
 
 	ExponentialFilter * DriveFilter;
 	DeadbandFilter * StickFilter;
@@ -204,8 +222,6 @@ private:
 
 	ShooterBelts * Belts;
 
-	DigitalInput * BallPositionSwitch;
-
 	// Behaviors
 
 	BehaviorController * Behaviors;
@@ -225,6 +241,10 @@ private:
 	AnalogChannel * DistanceSensorAnalog;
 	IRDistanceSensor * BallSensor;
 
+	IRDistanceConfig * BallSensorConfig;
+
+	DigitalInput * BallLimit;
+
 	// Arms
 
 	CANJagConfigInfo ArmServoConfig;
@@ -235,6 +255,8 @@ private:
 
 	CollectorArms * Arms;
 
+	ArmConfig * ArmsConfig;
+
 	// Winch
 
 	CANJagConfigInfo WinchServoConfig;
@@ -243,6 +265,8 @@ private:
 	AsynchCANJaguar * WinchM;
 
 	ShooterWinch * Winch;
+
+	WinchConfig * WinchConf;
 
 	// TEST STUFF
 

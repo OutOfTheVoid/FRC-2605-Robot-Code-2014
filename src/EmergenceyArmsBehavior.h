@@ -17,8 +17,8 @@
 * OUTPUT: Arms
 */
 
-#define ARM_LEFT_IN 0
-#define ARM_RIGHT_IN 0
+#define ARM_LEFT_IN 0.0
+#define ARM_RIGHT_IN 0.3
 
 class EmergenceyArmsBehavior : public Behavior
 {
