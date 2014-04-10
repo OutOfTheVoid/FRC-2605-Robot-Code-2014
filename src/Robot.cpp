@@ -53,9 +53,7 @@ void Robot :: InitVision ()
 
 	AutonomousTask = new Task ( "2605_Autonomous", (FUNCPTR) & Robot :: AutonomousTaskStub );
 	TeleopTask = new Task ( "2605_Teleop", (FUNCPTR) & Robot :: TeleopTaskStub );
-	VisionTask = new Task ( "2605_Vision", (FUNCPTR) & Robot :: VisionTaskStub, VISION_PRIORITY );
-
-	TargetingCamera = & AxisCamera :: GetInstance ( "10.26.5.11" );
+	VisionTask = new Task ( "2605_Vision", (FUNCPTR) & Robot :: VisionTaskStub, VISION_PRIORITY ); 
 
 };
 
@@ -147,7 +145,7 @@ void Robot :: InitMotors ()
 	Belts = new ShooterBelts ( BeltL, BeltR );
 
 	Belts -> SetMotorScale ( BELT_SPEED_SCALE );
-	Belts -> SetInverted ( false, false );
+	Belts -> SetInverted ( true, false );
 
 	// ARMS
 
@@ -187,7 +185,7 @@ void Robot :: InitMotors ()
 	WinchServoConfig.PotentiometerTurns = 10;
 	WinchServoConfig.PosRef = CANJaguar :: kPosRef_Potentiometer;
 	WinchServoConfig.NeutralAction = CANJaguar :: kNeutralMode_Brake;
-	WinchServoConfig.MaxVoltage = 10.0;
+	WinchServoConfig.MaxVoltage = 12.0;
 	WinchServoConfig.FaultTime = 0.51;
 	WinchServoConfig.LowPosLimit = 0.5;
 	WinchServoConfig.HighPosLimit = 9.5;
@@ -367,13 +365,6 @@ void Robot :: ShiftVGear ( uint8_t Gear )
 
 void Robot :: VisionTaskRoutine ()
 {
-
-	Threshold TargetColorThreshold ( 105, 137, 230, 255, 133, 183 );
-
-	ColorImage * TargetImage = new ColorImage ( IMAQ_IMAGE_HSL );
-
-	TargetingCamera -> WriteResolution ( AxisCameraParams :: kResolution_320x240 );
-	TargetingCamera -> GetImage ( TargetImage );
 
 };
 

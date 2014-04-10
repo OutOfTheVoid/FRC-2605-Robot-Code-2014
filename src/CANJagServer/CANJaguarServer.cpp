@@ -45,7 +45,7 @@ CANJaguarServer :: CANJaguarServer ( bool DoBrownOutCheck, double BrownOutCheckI
 /**
 * Destructor
 */
-CANJaguarServer :: ~CANJaguarServer ()
+CANJaguarServer :: ~CANJaguarServer () 
 {
 
 	Stop ();

@@ -15,7 +15,7 @@ AutonomousBehavior :: AutonomousBehavior ( MecanumDrive * Drive, ShooterBelts * 
 
 };
 
-AutonomousBehavior :: ~AutonomousBehavior ()
+AutonomousBehavior :: ~AutonomousBehavior ()  
 {
 
 	Stop ();
@@ -25,7 +25,7 @@ AutonomousBehavior :: ~AutonomousBehavior ()
 void AutonomousBehavior :: Start ()
 {
 
-	Log -> Log ( Logger :: LOG_DEBUG, "\n" );
+	Log -> Log ( Logger :: LOG_DEBUG, "\n" ); 
 
 	State = STATE_START;
 
@@ -33,9 +33,9 @@ void AutonomousBehavior :: Start ()
 	OnShift -> Call ();
 
 	Winch -> SetZero ();
-	Arms -> SetZeros (); 
+	Arms -> SetZeros ();
 
-	if ( ! Drive -> GetEnabled () )
+	if ( ! Drive -> GetEnabled () ) 
 		Drive -> Enable ();
 
 	if ( ! Belts -> GetEnabled () )

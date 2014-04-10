@@ -16,8 +16,8 @@
 
 #include "Logging/Logger.h"
 
-#define TIME_DRIVE_FORWARD 3.0
-#define TIME_BALL_DROP 1.6
+#define TIME_DRIVE_FORWARD 3.32
+#define TIME_BALL_DROP 1.8
 #define TIME_BALL_SHOOT 1.0
 
 #define POSITION_LEFT_OUT 0.67
